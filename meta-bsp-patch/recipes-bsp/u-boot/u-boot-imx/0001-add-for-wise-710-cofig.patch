@@ -1,0 +1,443 @@
+From 67d938240088a93134b68a802267ae4f0cbd863f Mon Sep 17 00:00:00 2001
+From: Ralph Wang <ralph.wang@advantech.com.tw>
+Date: Tue, 3 Mar 2020 13:53:33 +0800
+Subject: [PATCH] add for wise-710 cofig
+
+---
+ arch/arm/cpu/armv7/mx6/Kconfig                     |   7 +
+ board/freescale/mx6advantech/Kconfig               |   6 +
+ ...lwise710a1_4x_K4B2G1646Q-BCK0_1410024420-01.cfg | 222 +++++++++++++++++++++
+ configs/mx6dlwise710a1_1G_defconfig                |   6 +
+ include/configs/mx6wise710.h                       | 143 +++++++++++++
+ 5 files changed, 384 insertions(+)
+ create mode 100644 board/freescale/mx6advantech/mx6dlwise710a1_4x_K4B2G1646Q-BCK0_1410024420-01.cfg
+ create mode 100644 configs/mx6dlwise710a1_1G_defconfig
+ create mode 100644 include/configs/mx6wise710.h
+
+diff --git a/arch/arm/cpu/armv7/mx6/Kconfig b/arch/arm/cpu/armv7/mx6/Kconfig
+index fd60a08..6637067 100755
+--- a/arch/arm/cpu/armv7/mx6/Kconfig
++++ b/arch/arm/cpu/armv7/mx6/Kconfig
+@@ -155,6 +155,13 @@ config TARGET_MX6UBC220A1_1G
+ 	select DM
+ 	select DM_THERMAL
+ 
++config TARGET_MX6WISE710A1_1G
++	bool "Support mx6wise710a1 1G"
++	select CPU_V7
++	select SUPPORT_SPL
++	select DM
++	select DM_THERMAL
++
+ config TARGET_MX6ROM3420A1_1G
+ 	bool "Support mx6rom3420a1 1G"
+ 	select CPU_V7
+diff --git a/board/freescale/mx6advantech/Kconfig b/board/freescale/mx6advantech/Kconfig
+index f7cecfd..6aa5f1d 100755
+--- a/board/freescale/mx6advantech/Kconfig
++++ b/board/freescale/mx6advantech/Kconfig
+@@ -58,6 +58,12 @@ config SYS_CONFIG_NAME
+ 	default "mx6ubc220"
+ 
+ endif
++if TARGET_MX6WISE710A1_1G
++
++config SYS_CONFIG_NAME
++	default "mx6wise710"
++
++endif
+ if TARGET_MX6ROM3420A1_1G
+ 
+ config SYS_CONFIG_NAME
+diff --git a/board/freescale/mx6advantech/mx6dlwise710a1_4x_K4B2G1646Q-BCK0_1410024420-01.cfg b/board/freescale/mx6advantech/mx6dlwise710a1_4x_K4B2G1646Q-BCK0_1410024420-01.cfg
+new file mode 100644
+index 0000000..6b09211
+--- /dev/null
++++ b/board/freescale/mx6advantech/mx6dlwise710a1_4x_K4B2G1646Q-BCK0_1410024420-01.cfg
+@@ -0,0 +1,222 @@
++/*
++ * Copyright (C) 2014-2015 Freescale Semiconductor, Inc.
++ *
++ * SPDX-License-Identifier:	GPL-2.0+
++ *
++ * Refer docs/README.imxmage for more details about how-to configure
++ * and create imximage boot image
++ *
++ * The syntax is taken as close as possible with the kwbimage
++ */
++
++#define __ASSEMBLY__
++#include <config.h>
++/* image version */
++
++IMAGE_VERSION 2
++
++/*
++ * Boot Device : one of
++ * spi, sd (the board has no nand neither onenand)
++ */
++
++BOOT_FROM	sd
++#ifdef CONFIG_USE_PLUGIN
++/*PLUGIN    plugin-binary-file    IRAM_FREE_START_ADDR*/
++PLUGIN board/freescale/mx6sabresd/plugin.bin 0x00907000
++#else
++
++#ifdef CONFIG_SECURE_BOOT
++CSF CONFIG_CSF_SIZE
++#endif
++
++/*
++ * Device Configuration Data (DCD)
++ *
++ * Each entry must have the format:
++ * Addr-type           Address        Value
++ *
++ * where:
++ *	Addr-type register length (1,2 or 4 bytes)
++ *	Address	  absolute address of the register
++ *	value	  value to be stored in the register
++ */
++//DDR IO TYPE:
++DATA 4, 0x020e0774, 0x000C0000 // IOMUXC_SW_PAD_CTL_GRP_DDR_TYPE
++DATA 4, 0x020e0754, 0x00000000 // IOMUXC_SW_PAD_CTL_GRP_DDRPKE
++
++//CLOCK:
++DATA 4, 0x020e04ac, 0x00000030 // IOMUXC_SW_PAD_CTL_PAD_DRAM_SDCLK_0
++DATA 4, 0x020e04b0, 0x00000030 // IOMUXC_SW_PAD_CTL_PAD_DRAM_SDCLK_1
++
++//ADDRESS:
++DATA 4, 0x020e0464, 0x00000030 // IOMUXC_SW_PAD_CTL_PAD_DRAM_CAS
++DATA 4, 0x020e0490, 0x00000030 // IOMUXC_SW_PAD_CTL_PAD_DRAM_RAS
++DATA 4, 0x020e074c, 0x00000030 // IOMUXC_SW_PAD_CTL_GRP_ADDDS
++
++//CONTROL:
++DATA 4, 0x020e0494, 0x00000030 // IOMUXC_SW_PAD_CTL_PAD_DRAM_RESET
++
++DATA 4, 0x020e04a0, 0x00000000 // IOMUXC_SW_PAD_CTL_PAD_DRAM_SDBA2 - DSE can be configured using Group Control Register: IOMUXC_SW_PAD_CTL_GRP_CTLDS
++
++DATA 4, 0x020e04b4, 0x00000030 // IOMUXC_SW_PAD_CTL_PAD_DRAM_SDODT0
++DATA 4, 0x020e04b8, 0x00000030 // IOMUXC_SW_PAD_CTL_PAD_DRAM_SDODT1
++DATA 4, 0x020e076c, 0x00000030 // IOMUXC_SW_PAD_CTL_GRP_CTLDS
++
++//DATA STROBE:
++DATA 4, 0x020e0750, 0x00020000 // IOMUXC_SW_PAD_CTL_GRP_DDRMODE_CTL
++
++DATA 4, 0x020e04bc, 0x00000030 // IOMUXC_SW_PAD_CTL_PAD_DRAM_SDQS0
++DATA 4, 0x020e04c0, 0x00000030 // IOMUXC_SW_PAD_CTL_PAD_DRAM_SDQS1
++DATA 4, 0x020e04c4, 0x00000030 // IOMUXC_SW_PAD_CTL_PAD_DRAM_SDQS2
++DATA 4, 0x020e04c8, 0x00000030 // IOMUXC_SW_PAD_CTL_PAD_DRAM_SDQS3
++DATA 4, 0x020e04cc, 0x00000030 // IOMUXC_SW_PAD_CTL_PAD_DRAM_SDQS4
++DATA 4, 0x020e04d0, 0x00000030 // IOMUXC_SW_PAD_CTL_PAD_DRAM_SDQS5
++DATA 4, 0x020e04d4, 0x00000030 // IOMUXC_SW_PAD_CTL_PAD_DRAM_SDQS6
++DATA 4, 0x020e04d8, 0x00000030 // IOMUXC_SW_PAD_CTL_PAD_DRAM_SDQS7
++
++//DATA:
++DATA 4, 0x020e0760, 0x00020000 // IOMUXC_SW_PAD_CTL_GRP_DDRMODE
++
++DATA 4, 0x020e0764, 0x00000030 // IOMUXC_SW_PAD_CTL_GRP_B0DS
++DATA 4, 0x020e0770, 0x00000030 // IOMUXC_SW_PAD_CTL_GRP_B1DS
++DATA 4, 0x020e0778, 0x00000030 // IOMUXC_SW_PAD_CTL_GRP_B2DS
++DATA 4, 0x020e077c, 0x00000030 // IOMUXC_SW_PAD_CTL_GRP_B3DS
++DATA 4, 0x020e0780, 0x00000030 // IOMUXC_SW_PAD_CTL_GRP_B4DS
++DATA 4, 0x020e0784, 0x00000030 // IOMUXC_SW_PAD_CTL_GRP_B5DS
++DATA 4, 0x020e078c, 0x00000030 // IOMUXC_SW_PAD_CTL_GRP_B6DS
++DATA 4, 0x020e0748, 0x00000030 // IOMUXC_SW_PAD_CTL_GRP_B7DS
++
++DATA 4, 0x020e0470, 0x00000030 // IOMUXC_SW_PAD_CTL_PAD_DRAM_DQM0
++DATA 4, 0x020e0474, 0x00000030 // IOMUXC_SW_PAD_CTL_PAD_DRAM_DQM1
++DATA 4, 0x020e0478, 0x00000030 // IOMUXC_SW_PAD_CTL_PAD_DRAM_DQM2
++DATA 4, 0x020e047c, 0x00000030 // IOMUXC_SW_PAD_CTL_PAD_DRAM_DQM3
++DATA 4, 0x020e0480, 0x00000030 // IOMUXC_SW_PAD_CTL_PAD_DRAM_DQM4
++DATA 4, 0x020e0484, 0x00000030 // IOMUXC_SW_PAD_CTL_PAD_DRAM_DQM5
++DATA 4, 0x020e0488, 0x00000030 // IOMUXC_SW_PAD_CTL_PAD_DRAM_DQM6
++DATA 4, 0x020e048c, 0x00000030 // IOMUXC_SW_PAD_CTL_PAD_DRAM_DQM7
++
++//=============================================================================			
++// DDR Controller Registers			
++//=============================================================================			
++// Manufacturer:	Micron		
++// Device Part Number:	MT41J128M16HA-15E		
++// Clock Freq.: 	400MHz		
++// Density per CS in Gb: 	8		
++// Chip Selects used:	1		
++// Number of Banks:	8		
++// Row address:    	14		
++// Column address: 	10		
++// Data bus width	64		
++//=============================================================================
++DATA 4, 0x021b0800, 0xa1390003 // DDR_PHY_P0_MPZQHWCTRL, enable both one-time & periodic HW ZQ calibration.
++
++// write leveling, based on Freescale board layout and T topology			
++// For target board, may need to run write leveling calibration 			
++// to fine tune these settings			
++// If target board does not use T topology, then these registers			
++// should either be cleared or write leveling calibration can be run
++DATA 4, 0x021b080c, 0x001F001F
++DATA 4, 0x021b0810, 0x001F001F
++DATA 4, 0x021b480c, 0x001F001F
++DATA 4, 0x021b4810, 0x001F001F
++
++//######################################################			
++//calibration values based on calibration compare of 0x00ffff00:			
++//Note, these calibration values are based on Freescale's board			
++//May need to run calibration on target board to fine tune these 			
++//######################################################
++
++//Read DQS Gating calibration
++DATA 4, 0x021b083c, 0x425C025C // MPDGCTRL0 PHY0
++DATA 4, 0x021b0840, 0x0240024C // MPDGCTRL1 PHY0
++DATA 4, 0x021b483c, 0x42380238 // MPDGCTRL0 PHY1
++DATA 4, 0x021b4840, 0x02240230 // MPDGCTRL1 PHY1
++
++//Read calibration
++DATA 4, 0x021b0848, 0x42484644 // MPRDDLCTL PHY0
++DATA 4, 0x021b4848, 0x48464640 // MPRDDLCTL PHY1
++
++//Write calibration	
++DATA 4, 0x021b0850, 0x32363032 // MPWRDLCTL PHY0
++DATA 4, 0x021b4850, 0x36383832 // MPWRDLCTL PHY1
++
++//read data bit delay: (3 is the reccommended default value, although out of reset value is 0):
++DATA 4, 0x021b081c, 0x33333333 // DDR_PHY_P0_MPREDQBY0DL3
++DATA 4, 0x021b0820, 0x33333333 // DDR_PHY_P0_MPREDQBY1DL3
++DATA 4, 0x021b0824, 0x33333333 // DDR_PHY_P0_MPREDQBY2DL3
++DATA 4, 0x021b0828, 0x33333333 // DDR_PHY_P0_MPREDQBY3DL3
++DATA 4, 0x021b481c, 0x33333333 // DDR_PHY_P1_MPREDQBY0DL3
++DATA 4, 0x021b4820, 0x33333333 // DDR_PHY_P1_MPREDQBY1DL3
++DATA 4, 0x021b4824, 0x33333333 // DDR_PHY_P1_MPREDQBY2DL3
++DATA 4, 0x021b4828, 0x33333333 // DDR_PHY_P1_MPREDQBY3DL3
++
++//For i.mx6qd parts of versions A & B (v1.0, v1.1), uncomment the following lines. For version C (v1.2), keep commented			
++//setmem /32	0x021b08c0 =	0x24911492	// fine tune SDCLK duty cyc to low - seen to improve measured duty cycle of i.mx6
++//setmem /32	0x021b48c0 =	0x24911492
++
++// Complete calibration by forced measurement:
++DATA 4, 0x021b08b8, 0x00000800 // DDR_PHY_P0_MPMUR0, frc_msr
++DATA 4, 0x021b48b8, 0x00000800 // DDR_PHY_P0_MPMUR0, frc_msr
++
++//MMDC init:
++DATA 4, 0x021b0004, 0x0002002D // MMDC0_MDPDC
++DATA 4, 0x021b0008, 0x00333030 // MMDC0_MDOTC
++DATA 4, 0x021b000c, 0x3F435313 // MMDC0_MDCFG0
++DATA 4, 0x021b0010, 0xB66E8B63 // MMDC0_MDCFG1
++DATA 4, 0x021b0014, 0x01FF00DB // MMDC0_MDCFG2
++DATA 4, 0x021b0018, 0x00001740 // MMDC0_MDMISC
++//NOTE about MDMISC RALAT:			
++//MDMISC: RALAT kept to the high level of 5 to ensure stable operation at 528MHz. 			
++//MDMISC: consider reducing RALAT if your 528MHz board design allow that. Lower RALAT benefits: 			
++//a. better operation at low frequency			
++//b. Small performence improvment		
++
++DATA 4, 0x021b001c, 0x00008000 // MMDC0_MDSCR, set the Configuration request bit during MMDC set up
++DATA 4, 0x021b002c, 0x000026d2 // MMDC0_MDRWD; recommend to maintain the default values
++DATA 4, 0x021b0030, 0x00431023 // MMDC0_MDOR
++DATA 4, 0x021b0040, 0x00000027 // CS0_END
++
++DATA 4, 0x021b0000, 0x831A0000 // MMDC0_MDCTL
++
++// Mode register writes
++DATA 4, 0x021b001c, 0x04008032 // MMDC0_MDSCR, MR2 write, CS0
++DATA 4, 0x021b001c, 0x00008033 // MMDC0_MDSCR, MR3 write, CS0
++DATA 4, 0x021b001c, 0x00048031 // MMDC0_MDSCR, MR1 write, CS0
++DATA 4, 0x021b001c, 0x05208030 // MMDC0_MDSCR, MR0 write, CS0
++DATA 4, 0x021b001c, 0x04008040 // MMDC0_MDSCR, ZQ calibration command sent to device on CS0
++
++//setmem /32	0x021b001c =	0x0400803A	// MMDC0_MDSCR, MR2 write, CS1
++//setmem /32	0x021b001c =	0x0000803B	// MMDC0_MDSCR, MR3 write, CS1
++//setmem /32	0x021b001c =	0x00048039	// MMDC0_MDSCR, MR1 write, CS1
++//setmem /32	0x021b001c =	0x05208038	// MMDC0_MDSCR, MR0 write, CS1
++//setmem /32	0x021b001c =	0x04008048	// MMDC0_MDSCR, ZQ calibration command sent to device on CS1
++
++DATA 4, 0x021b0020, 0x00005800 // MMDC0_MDREF
++
++// It is recommended for new board designs and for customer boards			
++// to program these registers to a value of "0x00011117" 			
++// The DRAM ODT remains enabled and it is required to leave the DRAM ODT enabled
++DATA 4, 0x021b0818, 0x00033337 // DDR_PHY_P0_MPODTCTRL
++DATA 4, 0x021b4818, 0x00033337 // DDR_PHY_P1_MPODTCTRL
++
++DATA 4, 0x021b0004, 0x0002556D // MMDC0_MDPDC with PWDT bits set
++DATA 4, 0x021b0404, 0x00011006 // MMDC0_MAPSR ADOPT power down enabled, MMDC will enter automatically to self-refresh while the number of idle cycle reached.
++
++DATA 4, 0x021b001c, 0x00000000 // MMDC0_MDSCR, clear this register (especially the configuration bit as initialization is complete)
++
++/* set the default clock gate to save power */
++DATA 4, 0x020c4068, 0x00C03F3F
++DATA 4, 0x020c406c, 0x0030FC03
++DATA 4, 0x020c4070, 0x0FFFC000
++DATA 4, 0x020c4074, 0x3FF00000
++DATA 4, 0x020c4078, 0x00FFF300
++DATA 4, 0x020c407c, 0x0F0000F3
++DATA 4, 0x020c4080, 0x000003FF
++
++/* enable AXI cache for VDOA/VPU/IPU */
++DATA 4, 0x020e0010, 0xF00000CF
++/* set IPU AXI-id0 Qos=0xf(bypass) AXI-id1 Qos=0x7 */
++DATA 4, 0x020e0018, 0x007F007F
++DATA 4, 0x020e001c, 0x007F007F
++#endif
+diff --git a/configs/mx6dlwise710a1_1G_defconfig b/configs/mx6dlwise710a1_1G_defconfig
+new file mode 100644
+index 0000000..7ec1446
+--- /dev/null
++++ b/configs/mx6dlwise710a1_1G_defconfig
+@@ -0,0 +1,6 @@
++CONFIG_SPL=y
++CONFIG_SYS_EXTRA_OPTIONS="IMX_CONFIG=board/freescale/mx6advantech/mx6dlwise710a1_4x_K4B2G1646Q-BCK0_1410024420-01.cfg,SPL,MX6DL,SYS_USE_SPINOR"
++CONFIG_ARM=y
++CONFIG_ARCH_MX6=y
++CONFIG_TARGET_MX6WISE710A1_1G=y
++CONFIG_CMD_GPIO=y
+diff --git a/include/configs/mx6wise710.h b/include/configs/mx6wise710.h
+new file mode 100644
+index 0000000..edff5ad
+--- /dev/null
++++ b/include/configs/mx6wise710.h
+@@ -0,0 +1,143 @@
++/*
++ * Copyright (C) 2012-2016 Freescale Semiconductor, Inc.
++ *
++ * Configuration settings for the Freescale i.MX6Q SabreSD board.
++ *
++ * SPDX-License-Identifier:	GPL-2.0+
++ */
++
++#ifndef __MX6QSABRESD_CONFIG_H
++#define __MX6QSABRESD_CONFIG_H
++
++#ifdef CONFIG_SPL
++#define CONFIG_SPL_LIBCOMMON_SUPPORT
++#define CONFIG_SPL_MMC_SUPPORT
++#include "imx6_spl_advantech.h"
++#endif
++
++#define CONFIG_MACH_TYPE	3980
++#define CONFIG_MXC_UART_BASE	UART1_BASE
++#define CONFIG_CONSOLE_DEV		"ttymxc0"
++#define CONFIG_MMCROOT			"/dev/mmcblk0p2"  /* SDHC3 */
++
++#if defined(CONFIG_TARGET_MX6WISE710A1_512M)
++#define PHYS_SDRAM_SIZE         (512u * 1024 * 1024)
++#elif defined(CONFIG_TARGET_MX6WISE710A1_1G)
++#define PHYS_SDRAM_SIZE         (1u * 1024 * 1024 * 1024)
++#elif defined(CONFIG_TARGET_MX6WISE710A1_2G)
++#define PHYS_SDRAM_SIZE         (2u * 1024 * 1024 * 1024)
++#endif
++
++#if defined(CONFIG_MX6QP)
++#define CONFIG_DEFAULT_FDT_FILE	"imx6qp-wise710-a1.dtb"
++#elif defined(CONFIG_MX6Q)
++#define CONFIG_DEFAULT_FDT_FILE	"imx6q-wise710-a1.dtb"
++#elif defined(CONFIG_MX6DL)
++#define CONFIG_DEFAULT_FDT_FILE	"imx6dl-wise710-a1.dtb"
++#elif defined(CONFIG_MX6SOLO)
++#define CONFIG_DEFAULT_FDT_FILE	"imx6dl-wise710-a1.dtb"
++#endif
++#define CONFIG_MMC_CLOCK_DOWNGRADE
++#include "mx6advantech_common.h"
++/* don't use pmic */
++#undef CONFIG_LDO_BYPASS_CHECK
++
++#define CONFIG_SYS_FSL_USDHC_NUM	3
++#define CONFIG_SYS_MMC_ENV_DEV		1	/* SDHC3 */
++#define CONFIG_SYS_MMC_ENV_PART                0       /* user partition */
++
++#ifdef CONFIG_SYS_USE_SPINOR
++#define CONFIG_SF_DEFAULT_CS   0
++#endif
++#undef CONFIG_FEC_MXC_PHYADDR
++#define CONFIG_FEC_MXC_PHYADDR	7
++#undef CONFIG_PHY_ATHEROS
++#define CONFIG_PHY_REALTEK
++
++/*
++ * imx6 q/dl/solo pcie would be failed to work properly in kernel, if
++ * the pcie module is iniialized/enumerated both in uboot and linux
++ * kernel.
++ * rootcause:imx6 q/dl/solo pcie don't have the reset mechanism.
++ * it is only be RESET by the POR. So, the pcie module only be
++ * initialized/enumerated once in one POR.
++ * Set to use pcie in kernel defaultly, mask the pcie config here.
++ * Remove the mask freely, if the uboot pcie functions, rather than
++ * the kernel's, are required.
++ */
++/* #define CONFIG_CMD_PCI */
++#ifdef CONFIG_CMD_PCI
++#define CONFIG_PCI
++#define CONFIG_PCI_PNP
++#define CONFIG_PCI_SCAN_SHOW
++#define CONFIG_PCIE_IMX
++#define CONFIG_PCIE_IMX_PERST_GPIO	IMX_GPIO_NR(7, 12)
++#define CONFIG_PCIE_IMX_POWER_GPIO	IMX_GPIO_NR(3, 19)
++#endif
++
++/* USB Configs */
++#define CONFIG_CMD_USB
++#ifdef CONFIG_CMD_USB
++#define CONFIG_USB_EHCI
++#define CONFIG_USB_EHCI_MX6
++#define CONFIG_USB_STORAGE
++#define CONFIG_EHCI_HCD_INIT_AFTER_RESET
++#define CONFIG_USB_HOST_ETHER
++#define CONFIG_USB_ETHER_ASIX
++#define CONFIG_MXC_USB_PORTSC		(PORT_PTS_UTMI | PORT_PTS_PTW)
++#define CONFIG_MXC_USB_FLAGS		0
++#define CONFIG_USB_MAX_CONTROLLER_COUNT	1 /* Enabled USB controller number */
++#endif
++
++/*#define CONFIG_SPLASH_SCREEN*/
++/*#define CONFIG_MXC_EPDC*/
++
++/*
++ * SPLASH SCREEN Configs
++ */
++#ifndef CONFIG_ADVANTECH
++#if defined(CONFIG_SPLASH_SCREEN) && defined(CONFIG_MXC_EPDC)
++	/*
++	 * Framebuffer and LCD
++	 */
++	#define CONFIG_CMD_BMP
++	#define CONFIG_LCD
++	#define CONFIG_SYS_CONSOLE_IS_IN_ENV
++	#undef LCD_TEST_PATTERN
++	/* #define CONFIG_SPLASH_IS_IN_MMC			1 */
++	#define LCD_BPP					LCD_MONOCHROME
++	/* #define CONFIG_SPLASH_SCREEN_ALIGN		1 */
++
++	#define CONFIG_WAVEFORM_BUF_SIZE		0x200000
++#endif /* CONFIG_SPLASH_SCREEN && CONFIG_MXC_EPDC */
++#endif
++
++/* uncomment for SECURE mode support */
++/* #define CONFIG_SECURE_BOOT */
++
++#ifdef CONFIG_SECURE_BOOT
++#ifndef CONFIG_CSF_SIZE
++#define CONFIG_CSF_SIZE 0x4000
++#endif
++#endif
++
++/* #define CONFIG_MFG_IGNORE_CHECK_SECURE_BOOT */
++
++#define CONFIG_SUPPORT_LVDS
++#ifdef CONFIG_SUPPORT_LVDS
++#define IOMUX_LCD_BKLT_PWM 	MX6_PAD_SD1_CMD__GPIO1_IO18
++#define IOMUX_LCD_BKLT_EN	MX6_PAD_KEY_COL0__GPIO4_IO06
++#define IOMUX_LCD_VDD_EN	MX6_PAD_KEY_ROW0__GPIO4_IO07
++#define LCD_BKLT_PWM 		IMX_GPIO_NR(1, 18)
++#define LCD_BKLT_EN 		IMX_GPIO_NR(4, 6)
++#define LCD_VDD_EN 		IMX_GPIO_NR(4, 7)	
++#endif
++
++#define SPI1_CS0                IMX_GPIO_NR(2,30)
++#define IOMUX_SPI_SCLK          MX6_PAD_EIM_D16__ECSPI1_SCLK
++#define IOMUX_SPI_MISO          MX6_PAD_EIM_D17__ECSPI1_MISO
++#define IOMUX_SPI_MOSI          MX6_PAD_EIM_D18__ECSPI1_MOSI
++#define IOMUX_SPI_CS0           MX6_PAD_EIM_EB2__ECSPI1_SS0
++
++#define USDHC2_CD_GPIO		IMX_GPIO_NR(1, 4)
++#endif                         /* __MX6QSABRESD_CONFIG_H */
+-- 
+2.7.4
+

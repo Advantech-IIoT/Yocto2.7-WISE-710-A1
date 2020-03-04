@@ -1,0 +1,1015 @@
+From 63e02684043b188668dd6c2510a689817fd3ee27 Mon Sep 17 00:00:00 2001
+From: Ralph Wang <ralph.wang@advantech.com.tw>
+Date: Tue, 3 Mar 2020 15:41:11 +0800
+Subject: [PATCH 1/2] add for wise-710 config and rtc-rx8010 driver
+
+---
+ arch/arm/boot/dts/imx6dl-wise710-a1.dts | 374 ++++++++++++++++++++++
+ arch/arm/configs/imx_v7_adv_defconfig   |   8 +-
+ drivers/rtc/Kconfig                     |  10 +
+ drivers/rtc/Makefile                    |   1 +
+ drivers/rtc/rtc-rx8010.c                | 537 ++++++++++++++++++++++++++++++++
+ 5 files changed, 927 insertions(+), 3 deletions(-)
+ create mode 100644 arch/arm/boot/dts/imx6dl-wise710-a1.dts
+ create mode 100644 drivers/rtc/rtc-rx8010.c
+
+diff --git a/arch/arm/boot/dts/imx6dl-wise710-a1.dts b/arch/arm/boot/dts/imx6dl-wise710-a1.dts
+new file mode 100644
+index 0000000..dafc0c6
+--- /dev/null
++++ b/arch/arm/boot/dts/imx6dl-wise710-a1.dts
+@@ -0,0 +1,374 @@
++/*
++ * Copyright 2012 Freescale Semiconductor, Inc.
++ * Copyright 2011 Linaro Ltd.
++ *
++ * The code contained herein is licensed under the GNU General Public
++ * License. You may obtain a copy of the GNU General Public License
++ * Version 2 or later at the following locations:
++ *
++ * http://www.opensource.org/licenses/gpl-license.html
++ * http://www.gnu.org/copyleft/gpl.html
++ */
++
++/dts-v1/;
++
++#include "imx6dl.dtsi"
++#include "imx6qdl-advantech.dtsi"
++
++/ {
++	model = "Freescale i.MX6 DualLite WISE710 A1";
++	compatible = "fsl,imx6dl-sabresd", "fsl,imx6dl";
++
++	board {
++		compatible = "proc-board";
++		board-type = "WISE-710-A2";
++		board-cpu = "DualLiteSolo";
++	};
++
++	regulators {
++
++		reg_usb_otg_vbus: usb_otg_vbus {
++			compatible = "regulator-fixed";
++			regulator-name = "usb_otg_vbus";
++			regulator-min-microvolt = <5000000>;
++			regulator-max-microvolt = <5000000>;
++			gpio = <&gpio4 15  GPIO_ACTIVE_HIGH>;
++			enable-active-high;
++		};
++	};
++
++	leds {
++		compatible = "gpio-leds";
++		pinctrl-names = "default";
++		pinctrl-0 = <&pinctrl_leds_debug_1>;
++		/*	
++		debug-led {
++			label = "Heartbeat";
++			gpios = <&gpio7 12 0>;
++			linux,default-trigger = "heartbeat";
++		};
++		*/
++	};
++
++	gpio_direction {
++		pinctrl-names = "default";
++		compatible = "gpio-set-direction";
++		usb-host-pwr-en = <&gpio1 0 1>;
++		usb-host-oc = <&gpio1 3 0>;
++		wifi-det = <&gpio5 21 0>;
++		det-3g = <&gpio5 22 0>;
++		off-3g = <&gpio5 23 0>;
++		pcie-h-wlan-led = <&gpio6 15 0>;
++		pcie-h-wwan-led = <&gpio6 8 0>;
++		pcie-f-wlan-led = <&gpio2 0 0>;
++		pcie-f-wwan-led = <&gpio2 4 0>;
++	};
++};
++
++&audio_sgtl5000 {
++	status = "disabled";
++};
++
++&audmux {
++	status = "disabled";
++};
++
++&bkl {
++	status = "disable";
++};
++
++&ecspi1 {
++	fsl,spi-num-chipselects = <2>;
++	cs-gpios = <&gpio2 30 0>, <&gpio3 19 0>;
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_ecspi1_1 &pinctrl_ecspi1_cs_0 &pinctrl_ecspi1_cs_1>;
++	status = "okay";
++
++	chip1: m25p80@0 {
++		compatible = "st,m25p32";
++		spi-max-frequency = <20000000>;
++		reg = <0>;
++	};
++	chip2: fm25@1 {
++		compatible = "ramtron,fm25v10";
++		spi-max-frequency = <40000000>;
++		reg = <1>;
++	};
++};
++
++&can1 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_flexcan1_1>;
++	status = "okay";
++};
++
++&i2c1 {
++	wdt@29 {
++		compatible = "fsl,adv-wdt-i2c";
++		pinctrl-names = "default";
++		pinctrl-0 = <&pinctrl_wdt_en_1 &pinctrl_wdt_ping_1>;
++		status = "okay";
++		wdt-en = <&gpio2 5 0>;
++		wdt-ping = <&gpio1 9 0>;
++		reg = <0x29>;
++	};
++
++	rx8010@32 {
++		compatible = "epson,rx8010";
++		reg = <0x32>;
++	};
++
++	ecc508a@60 {
++		compatible = "atmel,ecc508a";
++		reg = <0x60>;
++	};
++};
++
++&i2c2 {
++	status = "disabled";
++};
++
++&i2c3 {
++	status = "disabled";
++};
++
++&iomuxc {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_hog_1 &pinctrl_hog_2>;
++
++	hog {
++		pinctrl_hog_1: hoggrp-1 {
++			fsl,pins = <
++				MX6QDL_PAD_GPIO_2__GPIO1_IO02		0x80000000	/* SD card - SD2_WP */
++				MX6QDL_PAD_GPIO_4__GPIO1_IO04		0x80000000	/* SD card - SD2_CD */
++				MX6QDL_PAD_EIM_D30__GPIO3_IO30		0x0001B0B0	/* BORAD_ID0 */
++				MX6QDL_PAD_EIM_D31__GPIO3_IO31		0x000130B0	/* BORAD_ID1 */
++			>;
++		};
++
++		pinctrl_hog_2: hoggrp-2 {
++			fsl,pins = <
++				MX6QDL_PAD_CSI0_VSYNC__GPIO5_IO21	0x0001B0B0	/* WIFI_DET# */
++				MX6QDL_PAD_CSI0_DAT4__GPIO5_IO22	0x0001B0B0	/* 3G_DET# */
++				MX6QDL_PAD_CSI0_DAT5__GPIO5_IO23	0x0001B0B0	/* 3G_OFF# */
++				MX6QDL_PAD_NANDF_CS2__GPIO6_IO15	0x0001B0B0	/* PCIE_H_WLAN_LED# */
++				MX6QDL_PAD_NANDF_ALE__GPIO6_IO08	0x0001B0B0	/* PCIE_H_WWAN_LED# */
++				MX6QDL_PAD_NANDF_D0__GPIO2_IO00		0x0001B0B0	/* PCIE_F_WLAN_LED# */
++				MX6QDL_PAD_NANDF_D4__GPIO2_IO04		0x00017059	/* PCIE_F_WWAN_LED# */
++			>;
++		};
++	};
++
++	leds {
++		pinctrl_leds_debug_1: leds_debug1grp-1{
++			fsl,pins = <
++				MX6QDL_PAD_GPIO_5__GPIO1_IO05 		0x80000000	/* gpio - com1_sel0 */
++				MX6QDL_PAD_GPIO_6__GPIO1_IO06 		0x80000000	/* gpio - com1_sel1 */
++				MX6QDL_PAD_GPIO_17__GPIO7_IO12		0x000130B0 	/* gpio - led */
++				MX6QDL_PAD_ENET_RXD0__GPIO1_IO27	0x80000000	/* DIO1(GPIO27) */
++				MX6QDL_PAD_ENET_TXD1__GPIO1_IO29	0x80000000  /* DIO2(GPIO29) */
++				MX6QDL_PAD_ENET_CRS_DV__GPIO1_IO25	0x80000000  /* DIO3(GPIO25) */
++				MX6QDL_PAD_ENET_TXD0__GPIO1_IO30	0x80000000  /* DIO4(GPIO30) */
++				MX6QDL_PAD_GPIO_19__GPIO4_IO05		0x80000000  /* DIO5(GPIO101) */
++				MX6QDL_PAD_GPIO_7__GPIO1_IO07		0x80000000  /* DIO6(GPIO7) */
++				MX6QDL_PAD_GPIO_8__GPIO1_IO08		0x80000000  /* DIO7(GPIO8) */
++				MX6QDL_PAD_GPIO_18__GPIO7_IO13		0x80000000  /* DIO8(GPIO205) */
++				MX6QDL_PAD_KEY_COL0__GPIO4_IO06		0x000130B0 	/* AI - MCU_INT */
++				MX6QDL_PAD_KEY_ROW0__GPIO4_IO07		0x000130B0	/* AI - COM_INT */
++			>;
++		};
++	};
++
++	pcie {
++		pinctrl_pcie_1: pcie1grp-1 {
++			fsl,pins = <
++				MX6QDL_PAD_CSI0_PIXCLK__GPIO5_IO18	0x80000000	/* PCIE disable pin - WIFI_OFF# */
++			>;
++		};
++	};
++
++	pwm4 {
++		pinctrl_pwm4_1: pwm4grp-1 {
++			fsl,pins = <
++				MX6QDL_PAD_SD1_CMD__PWM4_OUT		0x1b0b1
++			>;
++		};
++	};
++
++	spi1 {
++		pinctrl_ecspi1_cs_0: ecspi1_cs_grp-0 {
++			fsl,pins = <
++				MX6QDL_PAD_EIM_EB2__GPIO2_IO30		0x80000000	/* ECSPI1_CS0 */
++			>;
++		};
++	};
++
++	uart2 {
++		pinctrl_uart2_3: uart2grp-3 { /* DCE mode */
++			fsl,pins = <
++				MX6QDL_PAD_EIM_D26__UART2_TX_DATA		0x1b0b1
++				MX6QDL_PAD_EIM_D27__UART2_RX_DATA		0x1b0b1
++			>;
++		};
++	};
++
++	usbh1 {
++		pinctrl_usbh1_1: usbh1_grp-1 {
++			fsl,pins = <
++				MX6QDL_PAD_GPIO_0__GPIO1_IO00		0x00017099	/* USB_HOST_PWR_EN */
++				MX6QDL_PAD_GPIO_3__GPIO1_IO03		0x0001B8B1	/* USB_HOST_OC# */
++			>;
++		};
++	};
++
++	usbotg {
++		pinctrl_usbotg_pwr_1: usbotg_pwr_grp-1 {
++			fsl,pins = <
++				MX6QDL_PAD_KEY_ROW4__GPIO4_IO15		0x80000000	/* USB_OTG_PWR */
++				MX6QDL_PAD_KEY_COL4__GPIO4_IO14		0x0001B0B0	/* USB_OTG_OC */
++			>;
++		};
++	};
++
++	wdt{
++		pinctrl_wdt_en_1: wdt_engrp-1 {
++			fsl,pins = <
++				MX6QDL_PAD_NANDF_D5__GPIO2_IO05		0x80000000
++			>;
++		};
++
++		pinctrl_wdt_ping_1: wdt_pinggrp-1 {
++			fsl,pins = <
++				MX6QDL_PAD_GPIO_9__GPIO1_IO09		0x80000000
++			>;
++		};
++	};
++};
++
++&ldb {
++	lvds-channel@0 {
++		crtc = "ipu1-di0";
++	};
++
++	lvds-channel@1 {
++		status ="disabled";
++	};
++};
++
++&hdmi_core {
++	ipu_id = <0>;
++	disp_id = <1>;
++	status = "okay";
++};
++
++&mxcfb1 {
++	status = "okay";
++};
++
++&mxcfb3 {
++	status = "okay";
++};
++
++&pcie {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_pcie_1>;
++	disable-gpio = <&gpio5 18 0>;
++	status = "okay";
++};
++
++&pwm4 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_pwm4_1>;
++	status = "okay";
++
++};
++
++&ssi2 {
++	status = "disabled";
++};
++
++&uart1 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_uart1_1>;
++	status = "okay";
++};
++
++&uart2 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_uart2_3>;
++	fsl,uart-has-rtscts;
++	status = "okay";
++};
++
++&usbh1 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_usbh1_1>;
++	status = "okay";
++};
++
++&usbotg {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_usbotg_1 &pinctrl_usbotg_pwr_1>;
++	vbus-supply = <&reg_usb_otg_vbus>;
++	imx6-usb-charger-detection;
++	status = "okay";
++};
++
++&usdhc2 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_usdhc2_2>;
++	cd-gpios = <&gpio1 4 0>;
++	wp-gpios = <&gpio1 2 0>;
++	no-1-8-v;
++	keep-power-in-suspend;
++	enable-sdio-wakeup;
++	status = "okay";
++};
++
++&usdhc4 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_usdhc4_1>;
++	bus-width = <8>;
++	non-removable;
++	no-1-8-v;
++	keep-power-in-suspend;
++	status = "okay";
++};
++
++&wdog1 {
++	status = "disabled";
++};
++
++&mxcfb1 {
++	compatible = "fsl,mxc_sdc_fb";
++	disp_dev = "ldb";
++	interface_pix_fmt = "RGB24";
++	default_bpp = <32>;
++	int_clk = <0>;
++	late_init = <1>;
++	fb_base = <0x27800000>;
++	fb_size = <0x01800000>;
++	status = "okay";
++};
++
++&mxcfb3 {
++	status ="disabled";
++};
++
++//	primary;
++&ldb {                        
++	lvds-channel@0 {
++		crtc = "ipu1-di0";
++		status = "okay";
++	};
++
++	lvds-channel@1 {
++		status = "disabled";
++	};
++};
++
++&ipu1 {
++	bypass_reset = <1>;
++	status = "okay";
++};
++
+diff --git a/arch/arm/configs/imx_v7_adv_defconfig b/arch/arm/configs/imx_v7_adv_defconfig
+index 8b5874b..3a85c9a 100644
+--- a/arch/arm/configs/imx_v7_adv_defconfig
++++ b/arch/arm/configs/imx_v7_adv_defconfig
+@@ -179,9 +179,9 @@ CONFIG_BT_MRVL=m
+ CONFIG_BT_MRVL_SDIO=m
+ CONFIG_BT_MRVL_USB=m
+ CONFIG_BT_ATH3K=m
+-CONFIG_CFG80211=m
++CONFIG_CFG80211=y
+ CONFIG_CFG80211_WEXT=y
+-CONFIG_MAC80211=m
++CONFIG_MAC80211=y
+ CONFIG_DEVTMPFS=y
+ CONFIG_DEVTMPFS_MOUNT=y
+ # CONFIG_STANDALONE is not set
+@@ -231,6 +231,7 @@ CONFIG_DUMMY=y
+ CONFIG_MACVLAN=y
+ CONFIG_IPVLAN=y
+ CONFIG_VXLAN=y
++CONFIG_TUN=y
+ CONFIG_VETH=y
+ # CONFIG_NET_VENDOR_BROADCOM is not set
+ CONFIG_CS89x0=y
+@@ -279,7 +280,7 @@ CONFIG_RT2800USB=m
+ CONFIG_RT2800USB_RT53XX=y
+ CONFIG_RT2800USB_RT55XX=y
+ CONFIG_RT2800USB_UNKNOWN=y
+-# CONFIG_ADVANTECH_RISC_RTL8821CE is not set
++CONFIG_RTL_CARDS=m
+ CONFIG_ADVANTECH_RISC_RTL8188EE=m
+ CONFIG_ADVANTECH_RISC_RTL8821AE=m
+ CONFIG_MWIFIEX_PCIE_8897=m
+@@ -437,6 +438,7 @@ CONFIG_RTC_CLASS=y
+ CONFIG_RTC_INTF_DEV_UIE_EMUL=y
+ CONFIG_RTC_DRV_TPS65910=y
+ CONFIG_RTC_DRV_S35390A=y
++CONFIG_RTC_DRV_RX8010=y
+ CONFIG_RTC_DRV_MC13XXX=y
+ CONFIG_RTC_DRV_MXC=y
+ CONFIG_RTC_DRV_SNVS=y
+diff --git a/drivers/rtc/Kconfig b/drivers/rtc/Kconfig
+index 0fe4ad8..89fbacf 100644
+--- a/drivers/rtc/Kconfig
++++ b/drivers/rtc/Kconfig
+@@ -551,6 +551,16 @@ config RTC_DRV_FM3130
+ 	  This driver can also be built as a module. If so the module
+ 	  will be called rtc-fm3130.
+ 
++config RTC_DRV_RX8010
++	tristate "Epson RX-8010SJ"
++	depends on I2C
++	help
++		If you say yes here you get support for the Epson RX-8010 SJ RTC chips.
++			  	  
++		This driver can also be built as a module. If so, the module
++		will be called rtc-rx8010.
++
++
+ config RTC_DRV_RX8581
+ 	tristate "Epson RX-8581"
+ 	help
+diff --git a/drivers/rtc/Makefile b/drivers/rtc/Makefile
+index 2b82e2b..1287436 100644
+--- a/drivers/rtc/Makefile
++++ b/drivers/rtc/Makefile
+@@ -123,6 +123,7 @@ obj-$(CONFIG_RTC_DRV_RS5C348)	+= rtc-rs5c348.o
+ obj-$(CONFIG_RTC_DRV_RS5C372)	+= rtc-rs5c372.o
+ obj-$(CONFIG_RTC_DRV_RV3029C2)	+= rtc-rv3029c2.o
+ obj-$(CONFIG_RTC_DRV_RX4581)	+= rtc-rx4581.o
++obj-$(CONFIG_RTC_DRV_RX8010)	+= rtc-rx8010.o
+ obj-$(CONFIG_RTC_DRV_RX8025)	+= rtc-rx8025.o
+ obj-$(CONFIG_RTC_DRV_RX8581)	+= rtc-rx8581.o
+ obj-$(CONFIG_RTC_DRV_S35390A)	+= rtc-s35390a.o
+diff --git a/drivers/rtc/rtc-rx8010.c b/drivers/rtc/rtc-rx8010.c
+new file mode 100644
+index 0000000..4ce5589
+--- /dev/null
++++ b/drivers/rtc/rtc-rx8010.c
+@@ -0,0 +1,537 @@
++/*
++ * Driver for the Epson RTC module RX-8010 SJ
++ *
++ * Copyright(C) Timesys Corporation 2015
++ * Copyright(C) General Electric Company 2015
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 as
++ * published by the Free Software Foundation.
++ *
++ */
++
++#include <linux/bcd.h>
++#include <linux/bitops.h>
++#include <linux/i2c.h>
++#include <linux/kernel.h>
++#include <linux/module.h>
++#include <linux/rtc.h>
++
++#define RX8010_SEC     0x10
++#define RX8010_MIN     0x11
++#define RX8010_HOUR    0x12
++#define RX8010_WDAY    0x13
++#define RX8010_MDAY    0x14
++#define RX8010_MONTH   0x15
++#define RX8010_YEAR    0x16
++#define RX8010_YEAR    0x16
++#define RX8010_RESV17  0x17
++#define RX8010_ALMIN   0x18
++#define RX8010_ALHOUR  0x19
++#define RX8010_ALWDAY  0x1A
++#define RX8010_TCOUNT0 0x1B
++#define RX8010_TCOUNT1 0x1C
++#define RX8010_EXT     0x1D
++#define RX8010_FLAG    0x1E
++#define RX8010_CTRL    0x1F
++/* 0x20 to 0x2F are user registers */
++#define RX8010_RESV30  0x30
++#define RX8010_RESV31  0x31
++#define RX8010_IRQ     0x32
++
++#define RX8010_EXT_WADA  BIT(3)
++
++#define RX8010_FLAG_VLF  BIT(1)
++#define RX8010_FLAG_AF   BIT(3)
++#define RX8010_FLAG_TF   BIT(4)
++#define RX8010_FLAG_UF   BIT(5)
++
++#define RX8010_CTRL_AIE  BIT(3)
++#define RX8010_CTRL_UIE  BIT(5)
++#define RX8010_CTRL_STOP BIT(6)
++#define RX8010_CTRL_TEST BIT(7)
++
++#define RX8010_ALARM_AE  BIT(7)
++
++static const struct i2c_device_id rx8010_id[] = {
++	{ "rx8010", 0 },
++	{ }
++};
++MODULE_DEVICE_TABLE(i2c, rx8010_id);
++
++static const struct of_device_id rx8010_of_match[] = {
++	{ .compatible = "epson,rx8010" },
++	{ }
++};
++MODULE_DEVICE_TABLE(of, rx8010_of_match);
++
++struct rx8010_data {
++	struct i2c_client *client;
++	struct rtc_device *rtc;
++	u8 ctrlreg;
++};
++
++static irqreturn_t rx8010_irq_1_handler(int irq, void *dev_id)
++{
++	struct i2c_client *client = dev_id;
++	struct rx8010_data *rx8010 = i2c_get_clientdata(client);
++	int flagreg;
++
++	mutex_lock(&rx8010->rtc->ops_lock);
++
++	flagreg = i2c_smbus_read_byte_data(client, RX8010_FLAG);
++
++	if (flagreg <= 0) {
++		mutex_unlock(&rx8010->rtc->ops_lock);
++		return IRQ_NONE;
++	}
++
++	if (flagreg & RX8010_FLAG_VLF)
++		dev_warn(&client->dev, "Frequency stop detected\n");
++
++	if (flagreg & RX8010_FLAG_TF) {
++		flagreg &= ~RX8010_FLAG_TF;
++		rtc_update_irq(rx8010->rtc, 1, RTC_PF | RTC_IRQF);
++	}
++
++	if (flagreg & RX8010_FLAG_AF) {
++		flagreg &= ~RX8010_FLAG_AF;
++		rtc_update_irq(rx8010->rtc, 1, RTC_AF | RTC_IRQF);
++	}
++
++	if (flagreg & RX8010_FLAG_UF) {
++		flagreg &= ~RX8010_FLAG_UF;
++		rtc_update_irq(rx8010->rtc, 1, RTC_UF | RTC_IRQF);
++	}
++
++	i2c_smbus_write_byte_data(client, RX8010_FLAG, flagreg);
++
++	mutex_unlock(&rx8010->rtc->ops_lock);
++	return IRQ_HANDLED;
++}
++
++static int rx8010_get_time(struct device *dev, struct rtc_time *dt)
++{
++	struct rx8010_data *rx8010 = dev_get_drvdata(dev);
++	u8 date[7];
++	int flagreg;
++	int err;
++
++	flagreg = i2c_smbus_read_byte_data(rx8010->client, RX8010_FLAG);
++	if (flagreg < 0)
++		return flagreg;
++
++	if (flagreg & RX8010_FLAG_VLF) {
++		dev_warn(dev, "Frequency stop detected\n");
++		return -EINVAL;
++	}
++
++	err = i2c_smbus_read_i2c_block_data(rx8010->client, RX8010_SEC,
++			7, date);
++	if (err != 7)
++		return err < 0 ? err : -EIO;
++
++	dt->tm_sec = bcd2bin(date[RX8010_SEC - RX8010_SEC] & 0x7f);
++	dt->tm_min = bcd2bin(date[RX8010_MIN - RX8010_SEC] & 0x7f);
++	dt->tm_hour = bcd2bin(date[RX8010_HOUR - RX8010_SEC] & 0x3f);
++	dt->tm_mday = bcd2bin(date[RX8010_MDAY - RX8010_SEC] & 0x3f);
++	dt->tm_mon = bcd2bin(date[RX8010_MONTH - RX8010_SEC] & 0x1f) - 1;
++	dt->tm_year = bcd2bin(date[RX8010_YEAR - RX8010_SEC]) + 100;
++	dt->tm_wday = ffs(date[RX8010_WDAY - RX8010_SEC] & 0x7f);
++
++	return rtc_valid_tm(dt);
++}
++
++static int rx8010_set_time(struct device *dev, struct rtc_time *dt)
++{
++	struct rx8010_data *rx8010 = dev_get_drvdata(dev);
++	u8 date[7];
++	int ctrl, flagreg;
++	int ret;
++
++	if ((dt->tm_year < 100) || (dt->tm_year > 199))
++		return -EINVAL;
++
++	/* set STOP bit before changing clock/calendar */
++	ctrl = i2c_smbus_read_byte_data(rx8010->client, RX8010_CTRL);
++	if (ctrl < 0)
++		return ctrl;
++	rx8010->ctrlreg = ctrl | RX8010_CTRL_STOP;
++	ret = i2c_smbus_write_byte_data(rx8010->client, RX8010_CTRL,
++			rx8010->ctrlreg);
++	if (ret < 0)
++		return ret;
++
++	date[RX8010_SEC - RX8010_SEC] = bin2bcd(dt->tm_sec);
++	date[RX8010_MIN - RX8010_SEC] = bin2bcd(dt->tm_min);
++	date[RX8010_HOUR - RX8010_SEC] = bin2bcd(dt->tm_hour);
++	date[RX8010_MDAY - RX8010_SEC] = bin2bcd(dt->tm_mday);
++	date[RX8010_MONTH - RX8010_SEC] = bin2bcd(dt->tm_mon + 1);
++	date[RX8010_YEAR - RX8010_SEC] = bin2bcd(dt->tm_year - 100);
++	date[RX8010_WDAY - RX8010_SEC] = bin2bcd(1 << dt->tm_wday);
++
++	ret = i2c_smbus_write_i2c_block_data(rx8010->client,
++			RX8010_SEC, 7, date);
++	if (ret < 0)
++		return ret;
++
++	/* clear STOP bit after changing clock/calendar */
++	ctrl = i2c_smbus_read_byte_data(rx8010->client, RX8010_CTRL);
++	if (ctrl < 0)
++		return ctrl;
++	rx8010->ctrlreg = ctrl & ~RX8010_CTRL_STOP;
++	ret = i2c_smbus_write_byte_data(rx8010->client, RX8010_CTRL,
++			rx8010->ctrlreg);
++	if (ret < 0)
++		return ret;
++
++	flagreg = i2c_smbus_read_byte_data(rx8010->client, RX8010_FLAG);
++	if (flagreg < 0) {
++		return flagreg;
++	}
++
++	if (flagreg & RX8010_FLAG_VLF)
++		ret = i2c_smbus_write_byte_data(rx8010->client, RX8010_FLAG,
++				flagreg & ~RX8010_FLAG_VLF);
++
++	return 0;
++}
++
++static int rx8010_init_client(struct i2c_client *client)
++{
++	struct rx8010_data *rx8010 = i2c_get_clientdata(client);
++	u8 ctrl[2];
++	int need_clear = 0, err = 0;
++
++	u8 flag;
++
++	flag = i2c_smbus_read_byte_data(client, RX8010_FLAG);
++	if (err < 0)
++		return err;
++
++	flag &= ~(RX8010_FLAG_VLF);
++	err = i2c_smbus_write_byte_data(client, RX8010_FLAG, flag);
++
++
++	/* Initialize reserved registers as specified in datasheet */
++	err = i2c_smbus_write_byte_data(client, RX8010_RESV17, 0xD8);
++	if (err < 0)
++		return err;
++
++	err = i2c_smbus_write_byte_data(client, RX8010_RESV30, 0x00);
++	if (err < 0)
++		return err;
++
++	err = i2c_smbus_write_byte_data(client, RX8010_RESV31, 0x08);
++	if (err < 0)
++		return err;
++
++	err = i2c_smbus_write_byte_data(client, RX8010_IRQ, 0x00);
++	if (err < 0)
++		return err;
++
++	err = i2c_smbus_read_i2c_block_data(rx8010->client, RX8010_FLAG,
++			2, ctrl);
++	if (err != 2)
++		return err < 0 ? err : -EIO;
++
++	if (ctrl[0] & RX8010_FLAG_VLF)
++		dev_warn(&client->dev, "Frequency stop was detected\n");
++
++	if (ctrl[0] & RX8010_FLAG_AF) {
++		dev_warn(&client->dev, "Alarm was detected\n");
++		need_clear = 1;
++	}
++
++	if (ctrl[0] & RX8010_FLAG_TF)
++		need_clear = 1;
++
++	if (ctrl[0] & RX8010_FLAG_UF)
++		need_clear = 1;
++
++	if (need_clear) {
++		ctrl[0] &= ~(RX8010_FLAG_AF | RX8010_FLAG_TF | RX8010_FLAG_UF);
++		err = i2c_smbus_write_byte_data(client, RX8010_FLAG, ctrl[0]);
++		if (err < 0)
++			return err;
++	}
++
++	rx8010->ctrlreg = (ctrl[1] & ~RX8010_CTRL_TEST);
++           
++	return err;
++}
++
++static int rx8010_read_alarm(struct device *dev, struct rtc_wkalrm *t)
++{
++	struct rx8010_data *rx8010 = dev_get_drvdata(dev);
++	struct i2c_client *client = rx8010->client;
++	u8 alarmvals[3];
++	int flagreg;
++	int err;
++
++	err = i2c_smbus_read_i2c_block_data(client, RX8010_ALMIN, 3, alarmvals);
++	if (err != 3)
++		return err < 0 ? err : -EIO;
++
++	flagreg = i2c_smbus_read_byte_data(client, RX8010_FLAG);
++	if (flagreg < 0)
++		return flagreg;
++
++	t->time.tm_sec = 0;
++	t->time.tm_min = bcd2bin(alarmvals[0] & 0x7f);
++	t->time.tm_hour = bcd2bin(alarmvals[1] & 0x3f);
++
++	if (!(alarmvals[2] & RX8010_ALARM_AE))
++		t->time.tm_mday = bcd2bin(alarmvals[2] & 0x7f);
++
++	t->enabled = !!(rx8010->ctrlreg & RX8010_CTRL_AIE);
++	t->pending = (flagreg & RX8010_FLAG_AF) && t->enabled;
++
++	return err;
++}
++
++static int rx8010_set_alarm(struct device *dev, struct rtc_wkalrm *t)
++{
++	struct i2c_client *client = to_i2c_client(dev);
++	struct rx8010_data *rx8010 = dev_get_drvdata(dev);
++	u8 alarmvals[3];
++	int extreg, flagreg;
++	int err;
++
++	flagreg = i2c_smbus_read_byte_data(client, RX8010_FLAG);
++	if (flagreg < 0) {
++		return flagreg;
++	}
++
++	if (rx8010->ctrlreg & (RX8010_CTRL_AIE | RX8010_CTRL_UIE)) {
++		rx8010->ctrlreg &= ~(RX8010_CTRL_AIE | RX8010_CTRL_UIE);
++		err = i2c_smbus_write_byte_data(rx8010->client, RX8010_CTRL,
++				rx8010->ctrlreg);
++		if (err < 0) {
++			return err;
++		}
++	}
++
++	flagreg &= ~RX8010_FLAG_AF;
++	err = i2c_smbus_write_byte_data(rx8010->client, RX8010_FLAG, flagreg);
++	if (err < 0)
++		return err;
++
++	alarmvals[0] = bin2bcd(t->time.tm_min);
++	alarmvals[1] = bin2bcd(t->time.tm_hour);
++	alarmvals[2] = bin2bcd(t->time.tm_mday);
++
++	err = i2c_smbus_write_i2c_block_data(rx8010->client, RX8010_ALMIN,
++			2, alarmvals);
++	if (err < 0)
++		return err;
++
++	extreg = i2c_smbus_read_byte_data(client, RX8010_EXT);
++	if (extreg < 0)
++		return extreg;
++
++	extreg |= RX8010_EXT_WADA;
++	err = i2c_smbus_write_byte_data(rx8010->client, RX8010_EXT, extreg);
++	if (err < 0)
++		return err;
++
++	if (alarmvals[2] == 0)
++		alarmvals[2] |= RX8010_ALARM_AE;
++
++	err = i2c_smbus_write_byte_data(rx8010->client, RX8010_ALWDAY,
++			alarmvals[2]);
++	if (err < 0)
++		return err;
++
++	if (t->enabled) {
++		if (rx8010->rtc->uie_rtctimer.enabled)
++			rx8010->ctrlreg |= RX8010_CTRL_UIE;
++		if (rx8010->rtc->aie_timer.enabled)
++			rx8010->ctrlreg |=
++				(RX8010_CTRL_AIE | RX8010_CTRL_UIE);
++
++		err = i2c_smbus_write_byte_data(rx8010->client, RX8010_CTRL,
++				rx8010->ctrlreg);
++		if (err < 0)
++			return err;
++	}
++
++	return 0;
++}
++
++static int rx8010_alarm_irq_enable(struct device *dev,
++		unsigned int enabled)
++{
++	struct i2c_client *client = to_i2c_client(dev);
++	struct rx8010_data *rx8010 = dev_get_drvdata(dev);
++	int flagreg;
++	u8 ctrl;
++	int err;
++
++	ctrl = rx8010->ctrlreg;
++
++	if (enabled) {
++		if (rx8010->rtc->uie_rtctimer.enabled)
++			ctrl |= RX8010_CTRL_UIE;
++		if (rx8010->rtc->aie_timer.enabled)
++			ctrl |= (RX8010_CTRL_AIE | RX8010_CTRL_UIE);
++	} else {
++		if (!rx8010->rtc->uie_rtctimer.enabled)
++			ctrl &= ~RX8010_CTRL_UIE;
++		if (!rx8010->rtc->aie_timer.enabled)
++			ctrl &= ~RX8010_CTRL_AIE;
++	}
++
++	flagreg = i2c_smbus_read_byte_data(client, RX8010_FLAG);
++	if (flagreg < 0)
++		return flagreg;
++
++	flagreg &= ~RX8010_FLAG_AF;
++	err = i2c_smbus_write_byte_data(rx8010->client, RX8010_FLAG, flagreg);
++	if (err < 0)
++		return err;
++
++	if (ctrl != rx8010->ctrlreg) {
++		rx8010->ctrlreg = ctrl;
++		err = i2c_smbus_write_byte_data(rx8010->client, RX8010_CTRL,
++				rx8010->ctrlreg);
++		if (err < 0)
++			return err;
++	}
++
++	return 0;
++}
++
++static int rx8010_ioctl(struct device *dev, unsigned int cmd, unsigned long arg)
++{
++	struct i2c_client *client = to_i2c_client(dev);
++	struct rx8010_data *rx8010 = dev_get_drvdata(dev);
++	int ret, tmp;
++	int flagreg;
++
++	switch (cmd) {
++	case RTC_VL_READ:
++		flagreg = i2c_smbus_read_byte_data(rx8010->client, RX8010_FLAG);
++		if (flagreg < 0)
++			return flagreg;
++
++		tmp = !!(flagreg & RX8010_FLAG_VLF);
++		if (copy_to_user((void __user *)arg, &tmp, sizeof(int)))
++			return -EFAULT;
++
++		return 0;
++
++	case RTC_VL_CLR:
++		flagreg = i2c_smbus_read_byte_data(rx8010->client, RX8010_FLAG);
++		if (flagreg < 0) {
++			return flagreg;
++		}
++
++		flagreg &= ~RX8010_FLAG_VLF;
++		ret = i2c_smbus_write_byte_data(client, RX8010_FLAG, flagreg);
++		if (ret < 0)
++			return ret;
++
++		return 0;
++
++	default:
++		return -ENOIOCTLCMD;
++	}
++}
++
++static struct rtc_class_ops rx8010_rtc_ops = {
++	.read_time = rx8010_get_time,
++	.set_time = rx8010_set_time,
++	.ioctl = rx8010_ioctl,
++};
++
++static int rx8010_probe(struct i2c_client *client,
++		const struct i2c_device_id *id)
++{
++	struct i2c_adapter *adapter = to_i2c_adapter(client->dev.parent);
++	struct rx8010_data *rx8010;
++	int err = 0;
++
++	/*test*/
++	u8 year;
++
++	if (!i2c_check_functionality(adapter, I2C_FUNC_SMBUS_BYTE_DATA
++				| I2C_FUNC_SMBUS_I2C_BLOCK)) {
++		dev_err(&adapter->dev, "doesn't support required functionality\n");
++		return -EIO;
++	}
++
++	rx8010 = devm_kzalloc(&client->dev, sizeof(struct rx8010_data),
++			GFP_KERNEL);
++	if (!rx8010)
++		return -ENOMEM;
++
++	rx8010->client = client;
++	i2c_set_clientdata(client, rx8010);
++
++	err = rx8010_init_client(client);
++	if (err)
++		return err;
++
++	if (client->irq > 0) {
++		dev_info(&client->dev, "IRQ %d supplied\n", client->irq);
++		err = devm_request_threaded_irq(&client->dev, client->irq, NULL,
++				rx8010_irq_1_handler,
++				IRQF_TRIGGER_LOW | IRQF_ONESHOT,
++				"rx8010", client);
++
++		if (err) {
++			dev_err(&client->dev, "unable to request IRQ\n");
++			client->irq = 0;
++		} else {
++			rx8010_rtc_ops.read_alarm = rx8010_read_alarm;
++			rx8010_rtc_ops.set_alarm = rx8010_set_alarm;
++			rx8010_rtc_ops.alarm_irq_enable = rx8010_alarm_irq_enable;
++		}
++	}
++
++	rx8010_rtc_ops.read_alarm = rx8010_read_alarm;
++	rx8010_rtc_ops.set_alarm = rx8010_set_alarm;
++	rx8010_rtc_ops.alarm_irq_enable = rx8010_alarm_irq_enable;
++
++	device_init_wakeup(&client->dev, 1);
++
++	rx8010->rtc = devm_rtc_device_register(&client->dev, client->name,
++			&rx8010_rtc_ops, THIS_MODULE);
++
++	if (IS_ERR(rx8010->rtc)) {
++		dev_err(&client->dev, "unable to register the class device\n");
++		return PTR_ERR(rx8010->rtc);
++	}
++
++	rx8010->rtc->max_user_freq = 1;
++
++	/*test*/
++	year = i2c_smbus_read_byte_data(client, RX8010_YEAR);
++	dev_err(&client->dev, "The RTC year is %x\n", year);
++	if (year >= 57 ){
++		dev_err(&client->dev, "The RTC year is too large, reset it as 00\n");
++		year = 0;
++		err = i2c_smbus_write_byte_data(client, RX8010_YEAR, year);
++		if (err < 0)
++			return err;
++	}
++
++
++	return err;
++}
++
++static struct i2c_driver rx8010_driver = {
++	.driver = {
++		.name = "rtc-rx8010",
++		.of_match_table = of_match_ptr(rx8010_of_match),
++	},
++	.probe      = rx8010_probe,
++	.id_table   = rx8010_id,
++};
++
++module_i2c_driver(rx8010_driver);
++
++MODULE_AUTHOR("Akshay Bhat <akshay.bhat@timesys.com>");
++MODULE_DESCRIPTION("Epson RX8010SJ RTC driver");
++MODULE_LICENSE("GPL v2");
+-- 
+2.7.4
+

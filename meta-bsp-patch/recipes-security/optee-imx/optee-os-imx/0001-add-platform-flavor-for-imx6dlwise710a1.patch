@@ -1,0 +1,53 @@
+From ef3d82d9d7dc00fae1bc56d4cf577014c384f6de Mon Sep 17 00:00:00 2001
+From: Ralph Wang <advantechralph@gmail.com>
+Date: Tue, 14 Apr 2020 11:02:46 +0800
+Subject: [PATCH] add platform flavor for imx6dlwise710a1
+
+---
+ core/arch/arm/plat-imx/conf.mk | 13 ++++++++++++-
+ core/arch/arm/plat-imx/tzasc.c |  1 +
+ 2 files changed, 13 insertions(+), 1 deletion(-)
+
+diff --git a/core/arch/arm/plat-imx/conf.mk b/core/arch/arm/plat-imx/conf.mk
+index c6e5870..0c98de6 100644
+--- a/core/arch/arm/plat-imx/conf.mk
++++ b/core/arch/arm/plat-imx/conf.mk
+@@ -2,7 +2,7 @@ PLATFORM_FLAVOR ?= mx6ulevk
+ 
+ # Get SoC associated with the PLATFORM_FLAVOR
+ mx6d-flavorlist =
+-mx6dl-flavorlist = mx6dlsabresd mx6dlsabreauto
++mx6dl-flavorlist = mx6dlsabresd mx6dlsabreauto mx6dlwise710a1
+ mx6q-flavorlist = mx6qsabrelite mx6qsabresd mx6qsabreauto
+ mx6qp-flavorlist = mx6qpsabresd mx6qpsabreauto
+ mx6s-flavorlist = mx6solosabresd mx6solosabreauto
+@@ -297,6 +297,17 @@ CFG_BOOT_SECONDARY_REQUEST = y
+ CFG_UART_BASE ?= UART1_BASE
+ endif
+ 
++ifneq (,$(filter $(PLATFORM_FLAVOR),mx6dlwise710a1))
++CFG_DT ?= y
++CFG_NS_ENTRY_ADDR ?= 0x12000000
++CFG_DT_ADDR ?= 0x18000000
++CFG_DDR_SIZE ?= 0x40000000
++CFG_PSCI_ARM32 ?= y
++CFG_BOOT_SYNC_CPU = n
++CFG_BOOT_SECONDARY_REQUEST = y
++CFG_UART_BASE ?= UART1_BASE
++endif
++
+ ifneq (,$(filter $(PLATFORM_FLAVOR),mx6dlsabreauto))
+ CFG_DT ?= y
+ CFG_NS_ENTRY_ADDR ?= 0x12000000
+diff --git a/core/arch/arm/plat-imx/tzasc.c b/core/arch/arm/plat-imx/tzasc.c
+index a724203..7ad8dde 100644
+--- a/core/arch/arm/plat-imx/tzasc.c
++++ b/core/arch/arm/plat-imx/tzasc.c
+@@ -82,6 +82,7 @@
+ 	|| defined(PLATFORM_FLAVOR_mx6qsabresd) \
+ 	|| defined(PLATFORM_FLAVOR_mx6qsabrelite) \
+ 	|| defined(PLATFORM_FLAVOR_mx6dlsabresd) \
++	|| defined(PLATFORM_FLAVOR_mx6dlwise710a1) \
+ 	|| defined(PLATFORM_FLAVOR_mx6solosabresd))
+ static int board_imx_tzasc_configure(vaddr_t addr)
+ {

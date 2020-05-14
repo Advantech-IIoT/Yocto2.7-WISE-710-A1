@@ -1,0 +1,208 @@
+From 5e072ec237fb032439db38df75fec7c184c616d5 Mon Sep 17 00:00:00 2001
+From: Ralph Wang <advantechralph@gmail.com>
+Date: Wed, 22 Apr 2020 18:55:02 +0800
+Subject: [PATCH] wise710a1
+
+---
+ arch/arm/boot/dts/imx6dl-sabresd.dts   |  5 +++--
+ arch/arm/boot/dts/imx6qdl-sabresd.dtsi | 34 +++++++++++++++++++++++++---------
+ arch/arm/boot/dts/imx6qdl.dtsi         |  4 ++--
+ arch/arm/configs/imx_v7_defconfig      |  5 +++++
+ 4 files changed, 35 insertions(+), 13 deletions(-)
+
+diff --git a/arch/arm/boot/dts/imx6dl-sabresd.dts b/arch/arm/boot/dts/imx6dl-sabresd.dts
+index e8bc07c..726147a 100644
+--- a/arch/arm/boot/dts/imx6dl-sabresd.dts
++++ b/arch/arm/boot/dts/imx6dl-sabresd.dts
+@@ -61,7 +61,7 @@
+ 	V3P3-supply = <&V3P3_reg>;
+ 	VCOM-supply = <&VCOM_reg>;
+ 	DISPLAY-supply = <&DISPLAY_reg>;
+-	status = "okay";
++	status = "disabled";
+ };
+ 
+ &i2c3 {
+@@ -75,11 +75,12 @@
+ 		gpio_elan_cs = <&gpio2 18 0>;
+ 		gpio_elan_rst = <&gpio3 8 0>;
+ 		gpio_intr = <&gpio3 28 0>;
+-		status = "okay";
++		status = "disabled";
+ 	};
+ 
+         max17135@48 {
+                 compatible = "maxim,max17135";
++		status = "disabled";
+                 reg = <0x48>;
+                 vneg_pwrup = <1>;
+                 gvee_pwrup = <1>;
+diff --git a/arch/arm/boot/dts/imx6qdl-sabresd.dtsi b/arch/arm/boot/dts/imx6qdl-sabresd.dtsi
+index f38f4ee..aec2c77 100644
+--- a/arch/arm/boot/dts/imx6qdl-sabresd.dtsi
++++ b/arch/arm/boot/dts/imx6qdl-sabresd.dtsi
+@@ -126,6 +126,7 @@
+ 		compatible = "gpio-keys";
+ 		pinctrl-names = "default";
+ 		pinctrl-0 = <&pinctrl_gpio_keys>;
++		status = "disabled"; 
+ 
+ 		power {
+ 			label = "Power Button";
+@@ -174,6 +175,7 @@
+ 		codec-master;
+ 		hp-det-gpios = <&gpio7 8 1>;
+ 		mic-det-gpios = <&gpio1 9 1>;
++		status = "disabled";
+ 	};
+ 
+ 	sound-hdmi {
+@@ -303,7 +305,7 @@
+ &audmux {
+ 	pinctrl-names = "default";
+ 	pinctrl-0 = <&pinctrl_audmux>;
+-	status = "okay";
++	status = "disabled";
+ };
+ 
+ &clks {
+@@ -314,7 +316,7 @@
+ };
+ 
+ &ecspi1 {
+-	cs-gpios = <&gpio4 9 0>;
++	cs-gpios = <&gpio2 30 0 &gpio3 19 0>;
+ 	pinctrl-names = "default";
+ 	pinctrl-0 = <&pinctrl_ecspi1>;
+ 	status = "okay";
+@@ -382,8 +384,19 @@
+ 	pinctrl-0 = <&pinctrl_i2c1>;
+ 	status = "okay";
+ 
++	rx8010@32 {
++		compatible = "epson,rx8010";
++		reg = <0x32>;
++	};
++
++	ecc508a@60 {
++		compatible = "atmel,ecc508a";
++		reg = <0x60>;
++	};
++
+ 	codec: wm8962@1a {
+ 		compatible = "wlf,wm8962";
++		status = "disabled";
+ 		reg = <0x1a>;
+ 		clocks = <&clks IMX6QDL_CLK_CKO>;
+ 		DCVDD-supply = <&reg_audio>;
+@@ -407,6 +420,7 @@
+ 
+ 	mma8451@1c {
+ 		compatible = "fsl,mma8451";
++		status = "disabled";
+ 		reg = <0x1c>;
+ 		position = <0>;
+ 		vdd-supply = <&reg_sensor>;
+@@ -418,6 +432,7 @@
+ 
+ 	ov564x: ov564x@3c {
+ 		compatible = "ovti,ov564x";
++		status = "disabled";
+ 		reg = <0x3c>;
+ 		pinctrl-names = "default";
+ 		pinctrl-0 = <&pinctrl_ipu1_2>;
+@@ -459,11 +474,13 @@
+ 		interrupt-parent = <&gpio3>;
+ 		interrupts = <26 2>;
+ 		work-mode = <1>;/*DCM mode*/
++		status = "disabled";
+ 	};
+ 
+ 	pmic: pfuze100@8 {
+ 		compatible = "fsl,pfuze100";
+ 		reg = <0x8>;
++		status = "disabled";
+ 
+ 		regulators {
+ 			sw1a_reg: sw1ab {
+@@ -663,10 +680,9 @@
+ 
+ 		pinctrl_ecspi1: ecspi1grp {
+ 			fsl,pins = <
+-				MX6QDL_PAD_KEY_COL1__ECSPI1_MISO	0x100b1
+-				MX6QDL_PAD_KEY_ROW0__ECSPI1_MOSI	0x100b1
+-				MX6QDL_PAD_KEY_COL0__ECSPI1_SCLK	0x100b1
+-				MX6QDL_PAD_KEY_ROW1__GPIO4_IO09		0x1b0b0
++				MX6QDL_PAD_EIM_D17__ECSPI1_MISO         0x100b1
++				MX6QDL_PAD_EIM_D18__ECSPI1_MOSI         0x100b1
++				MX6QDL_PAD_EIM_D16__ECSPI1_SCLK         0x100b1
+ 			>;
+ 		};
+ 
+@@ -1054,7 +1070,7 @@
+ 				 <&clks IMX6QDL_CLK_PLL4>,
+ 				 <&clks IMX6QDL_CLK_PLL4_AUDIO_DIV>;
+ 	assigned-clock-rates = <737280000>, <0>, <0>;
+-	status = "okay";
++	status = "disabled";
+ };
+ 
+ &uart1 {
+@@ -1091,8 +1107,8 @@
+ 	pinctrl-names = "default";
+ 	pinctrl-0 = <&pinctrl_usdhc2>;
+ 	bus-width = <8>;
+-	cd-gpios = <&gpio2 2 GPIO_ACTIVE_LOW>;
+-	wp-gpios = <&gpio2 3 GPIO_ACTIVE_HIGH>;
++	cd-gpios = <&gpio1 4 GPIO_ACTIVE_LOW>;
++	wp-gpios = <&gpio1 2 GPIO_ACTIVE_HIGH>;
+ 	no-1-8-v;
+ 	keep-power-in-suspend;
+ 	enable-sdio-wakeup;
+diff --git a/arch/arm/boot/dts/imx6qdl.dtsi b/arch/arm/boot/dts/imx6qdl.dtsi
+index fcfba49..1021e67 100644
+--- a/arch/arm/boot/dts/imx6qdl.dtsi
++++ b/arch/arm/boot/dts/imx6qdl.dtsi
+@@ -33,10 +33,10 @@
+ 		i2c1 = &i2c2;
+ 		i2c2 = &i2c3;
+ 		ipu0 = &ipu1;
+-		mmc0 = &usdhc1;
++		mmc0 = &usdhc4;
+ 		mmc1 = &usdhc2;
+ 		mmc2 = &usdhc3;
+-		mmc3 = &usdhc4;
++		mmc3 = &usdhc1;
+ 		serial0 = &uart1;
+ 		serial1 = &uart2;
+ 		serial2 = &uart3;
+diff --git a/arch/arm/configs/imx_v7_defconfig b/arch/arm/configs/imx_v7_defconfig
+index 3d6d67e..113a6cb 100644
+--- a/arch/arm/configs/imx_v7_defconfig
++++ b/arch/arm/configs/imx_v7_defconfig
+@@ -26,6 +26,9 @@ CONFIG_SOC_IMX7D=y
+ CONFIG_SOC_IMX7ULP=y
+ CONFIG_SOC_VF610=y
+ # CONFIG_SWP_EMULATE is not set
++CONFIG_PCI=y
++CONFIG_PCI_MSI=y
++CONFIG_PCI_IMX6=y
+ CONFIG_SMP=y
+ CONFIG_VMSPLIT_2G=y
+ CONFIG_ARM_PSCI=y
+@@ -137,6 +140,7 @@ CONFIG_CS89x0_PLATFORM=y
+ # CONFIG_NET_VENDOR_MICREL is not set
+ # CONFIG_NET_VENDOR_MICROCHIP is not set
+ # CONFIG_NET_VENDOR_NATSEMI is not set
++CONFIG_R8169=y
+ # CONFIG_NET_VENDOR_SEEQ is not set
+ CONFIG_SMC91X=y
+ CONFIG_SMC911X=y
+@@ -369,6 +373,7 @@ CONFIG_LEDS_TRIGGER_BACKLIGHT=y
+ CONFIG_LEDS_TRIGGER_GPIO=y
+ CONFIG_RTC_CLASS=y
+ CONFIG_RTC_INTF_DEV_UIE_EMUL=y
++CONFIG_RTC_DRV_RX8010=y
+ CONFIG_RTC_DRV_MC13XXX=y
+ CONFIG_RTC_DRV_MXC=y
+ CONFIG_RTC_DRV_SNVS=y

@@ -32,6 +32,8 @@ Usage:
   ex: 
     $$ YOCTO_WORK_DIR=/root/imx-linux-warrior make prepare
 
+  Currently, YOCTO_WORK_DIR=$(shell source build/yocto/build.imx6dlwise710a1/conf/extra-local.conf;echo $$DL_DIR| sed -e 's/\/downloads$$//')
+
 endef
 export usage_str
 

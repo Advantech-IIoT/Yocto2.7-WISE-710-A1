@@ -1,0 +1,32 @@
+#
+# EAPI function test demo
+#
+
+# Usage:
+# Brightness test 
+./testdl_brightness  
+
+# Board info test - get board info
+./testdl_ec  
+
+# DIO test - get Direction (1:input, 0:output)
+./testdl_gpio 2 <Id> 
+# DIO test - set Direction (1:input, 0:output)
+./testdl_gpio 3 <Id> <Direction>
+# DIO test - get value (1:high, 0:low)
+./testdl_gpio 4 <Id>
+# DIO test - set value (1:high, 0:low)
+./testdl_gpio 5 <Id> <Value>
+
+# Hwmon test - get CPU temp
+./testdl_hwmon 
+
+# Advantech UPS (IPSAE-2730/1560) test - get UPS status
+./testdl_ipsae 
+
+# Watchdog test - set timeout
+./testdl_wdt -s <timeout>
+# Watchdog test - keepalive
+./testdl_wdt -k
+# Watchdog test - disable watchdog
+./testdl_wdt -d

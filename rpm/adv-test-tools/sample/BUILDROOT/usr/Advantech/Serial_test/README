@@ -1,0 +1,26 @@
+#
+# Serial test tool
+#
+# Hardware switch set:
+# COM1 232 mode: SW9 Bit 1,3,6 ON. Bit 2,4,5,7,8 OFF.
+# COM1 485 mode: SW9 Bit 1,3,5,8 ON. Bit 2,4,6,7 OFF. Bit 7 receiver termination.
+# COM1 debug console mode: SW9 Bit 2,4,6 ON. Bit 1,3,5,7,8 OFF.
+#
+# COM2 485 mode: SW11 Bit 1, 3 ON. Bit 2, 4 OFF.
+# COM2 CAN mode: SW11 Bit 2, 4 ON. Bit 1, 3 OFF.
+#
+# serial mode type:
+# DBG  /dev/ttymxc0		232 115200 8N1
+# COM1 /dev/ttyUSB0		232/485
+# COM2 /dev/ttyUSB2		485
+# COM3 /dev/ttyUSB3		485
+#
+
+# COM1 RS-232 loopback test with 115200 baudrate
+./st -rsavo /dev/ttyUSB0 -m 232 -b 115200
+
+# COM2 RS-485 mode read test with 9600 baudrate
+./st -ravo /dev/ttyUSB2 -m 485 -b 9600
+
+# COM3 RS-485 mode write test with 9600 baudrate 
+./st -savo /dev/ttyUSB3 -m 485 -b 9600

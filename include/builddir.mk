@@ -1,0 +1,4 @@
+
+$(builddir) $(yoctodir):
+	@mkdir -p $@
+

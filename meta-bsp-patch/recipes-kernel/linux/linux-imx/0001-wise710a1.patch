@@ -1,6 +1,6 @@
-From 5e072ec237fb032439db38df75fec7c184c616d5 Mon Sep 17 00:00:00 2001
+From e7132da63b2133eb39da2b2ead0ac3f3b9c52d5d Mon Sep 17 00:00:00 2001
 From: Ralph Wang <advantechralph@gmail.com>
-Date: Wed, 22 Apr 2020 18:55:02 +0800
+Date: Fri, 3 Jul 2020 15:36:07 +0800
 Subject: [PATCH] wise710a1
 
 ---
@@ -8,7 +8,8 @@ Subject: [PATCH] wise710a1
  arch/arm/boot/dts/imx6qdl-sabresd.dtsi | 34 +++++++++++++++++++++++++---------
  arch/arm/boot/dts/imx6qdl.dtsi         |  4 ++--
  arch/arm/configs/imx_v7_defconfig      |  5 +++++
- 4 files changed, 35 insertions(+), 13 deletions(-)
+ drivers/net/ethernet/realtek/r8169.c   | 10 ++++++++++
+ 5 files changed, 45 insertions(+), 13 deletions(-)
 
 diff --git a/arch/arm/boot/dts/imx6dl-sabresd.dts b/arch/arm/boot/dts/imx6dl-sabresd.dts
 index e8bc07c..726147a 100644
@@ -206,3 +207,26 @@ index 3d6d67e..113a6cb 100644
  CONFIG_RTC_DRV_MC13XXX=y
  CONFIG_RTC_DRV_MXC=y
  CONFIG_RTC_DRV_SNVS=y
+diff --git a/drivers/net/ethernet/realtek/r8169.c b/drivers/net/ethernet/realtek/r8169.c
+index 7a50b91..5c05e7c 100644
+--- a/drivers/net/ethernet/realtek/r8169.c
++++ b/drivers/net/ethernet/realtek/r8169.c
+@@ -759,8 +759,18 @@ static void rtl_unlock_work(struct rtl8169_private *tp)
+ 
+ static void rtl_tx_performance_tweak(struct rtl8169_private *tp, u16 force)
+ {
++#if 0
+ 	pcie_capability_clear_and_set_word(tp->pci_dev, PCI_EXP_DEVCTL,
+ 					   PCI_EXP_DEVCTL_READRQ, force);
++#else
++	u16 ctl;
++	struct pci_dev *pdev = tp->pci_dev;
++
++	pcie_capability_read_word(pdev, PCI_EXP_DEVCTL, &ctl);
++	dev_info(&pdev->dev, "MRRS = %d, MPS = %d\n",
++		128 << ((ctl & PCI_EXP_DEVCTL_READRQ) >> 12),
++		128 << ((ctl & PCI_EXP_DEVCTL_PAYLOAD) >> 5));
++#endif
+ }
+ 
+ struct rtl_cond {

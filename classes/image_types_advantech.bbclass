@@ -425,6 +425,10 @@ IMAGE_CMD_sdcard () {
 	# [Advantech] Prepare both normal & eng images
 	${SDCARD_GENERATION_COMMAND} normal
 	${SDCARD_GENERATION_COMMAND} eng
+
+	ln -sf ${SDCARD} ${DEPLOY_DIR_IMAGE}/${IMAGE_BASENAME}-${MACHINE}.sdcard
+	ln -sf ${ENG_SDCARD} ${DEPLOY_DIR_IMAGE}/${IMAGE_BASENAME}-${MACHINE}.eng.sdcard
+
 }
 
 # The sdcard requires the rootfs filesystem to be built before using

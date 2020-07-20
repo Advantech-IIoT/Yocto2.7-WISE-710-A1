@@ -23,8 +23,11 @@ Usage:
       prepare                        Set up yocto layers. 
       build                          Build core-image-minimal image. 
       buildqt5                       Build fsl-image-qt5 image. 
+      buildcmdline                   Build core-image-full-cmdline image.
       u-boot-imx                     Build u-boot-imx
       linux-imx                      Build linux-imx
+      writesdcard                    Write image to SDCARD.
+      writesdcardremote              Write image to SDCARD on remote device.
                                                                
     parameter:                                                 
                                                                

@@ -18,5 +18,7 @@ yoctoworkdir=$(YOCTO_WORK_DIR_CHK)
 else
 yoctoworkdir=$(yoctodir)/$(yoctobuilddir)
 endif
-fslimageqt5=$(shell realpath -m $(yoctoworkdir)/tmp/deploy/images/$(yoctomachine)/fsl-image-qt5-$(yoctomachine).sdcard)
+fsl-image-qt5=$(shell realpath -m $(yoctoworkdir)/tmp/deploy/images/$(yoctomachine)/fsl-image-qt5-$(yoctomachine).sdcard)
+core-image-full-cmdline=$(shell realpath -m $(yoctoworkdir)/tmp/deploy/images/$(yoctomachine)/core-image-full-cmdline-$(yoctomachine).sdcard)
+sdcardimage=core-image-full-cmdline
 

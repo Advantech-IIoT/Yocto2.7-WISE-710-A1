@@ -12,7 +12,7 @@ SHELL=/bin/bash
 export YOCTO_DL_DIR="$(YOCTO_WORK_DIR)/downloads"
 export YOCTO_TMPDIR="$(YOCTO_WORK_DIR)/tmp"
 export YOCTO_SSTATE_DIR="$(YOCTO_WORK_DIR)/sstate-cache"
-YOCTO_WORK_DIR_CHK=$(shell if [ -f "$(yoctodir)/$(yoctobuilddir)/conf/extra-local.conf" ] ; then source $(yoctodir)/$(yoctobuilddir)/conf/extra-local.conf; echo $$DL_DIR| sed -e 's/\/downloads$$//'; fi)
+YOCTO_WORK_DIR_CHK=$(shell if [ -f "$(yoctodir)/$(yoctobuilddir)/conf/extra-local.conf" ] ; then eval $$(cat /work/wise710a1/yocto-2.7/build/yocto/build.imx6dlwise710a1/conf/extra-local.conf | grep DL_DIR) ; echo $$DL_DIR | sed -e 's/\/downloads$$//'; fi)
 ifneq ($(YOCTO_WORK_DIR_CHK),)
 yoctoworkdir=$(YOCTO_WORK_DIR_CHK)
 else

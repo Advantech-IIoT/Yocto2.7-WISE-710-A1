@@ -1,0 +1,31 @@
+From e209d6197d653b5e942785ee64ea9f85c462ea66 Mon Sep 17 00:00:00 2001
+From: advantechralph <advantechralph@gmail.com>
+Date: Mon, 27 Jul 2020 17:13:17 +0800
+Subject: [PATCH] disable i2c2 and i2c3
+
+---
+ arch/arm/boot/dts/imx6qdl-sabresd.dtsi | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/boot/dts/imx6qdl-sabresd.dtsi b/arch/arm/boot/dts/imx6qdl-sabresd.dtsi
+index 897eae22357b..05dd7239a3e4 100644
+--- a/arch/arm/boot/dts/imx6qdl-sabresd.dtsi
++++ b/arch/arm/boot/dts/imx6qdl-sabresd.dtsi
+@@ -466,7 +466,7 @@
+ 	pinctrl-1 = <&pinctrl_i2c2_gpio>;
+ 	scl-gpios = <&gpio4 12 GPIO_ACTIVE_HIGH>;
+ 	sda-gpios = <&gpio4 13 GPIO_ACTIVE_HIGH>;
+-	status = "okay";
++	status = "disabled";
+ 
+ 	egalax_ts@4 {
+ 		compatible = "eeti,egalax_ts";
+@@ -614,7 +614,7 @@
+ 	clock-frequency = <100000>;
+ 	pinctrl-names = "default";
+ 	pinctrl-0 = <&pinctrl_i2c3>;
+-	status = "okay";
++	status = "disabled";
+ 
+ 	egalax_ts@4 {
+ 		compatible = "eeti,egalax_ts";

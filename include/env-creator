@@ -1,0 +1,35 @@
+
+# bitbake env creator
+
+[ -z "$1" ] && target=core-image-full-cmdline || target=$1
+
+out=${target}.env
+env=$out/env.log
+mkdir -p $out
+
+if [ ! -e $env ] ; then
+  bitbake -e $target | tee $env
+elif [ ${force:-9} -eq 1 ] ; then
+  bitbake -e $target | tee $env
+fi
+# && ( bitbake -e $target | tee $env ) || ( [ "$force" -eq 1 ] && ( bitbake -e $target | tee $env ) )
+
+function getEnvVal(){
+  echo $(cat $env | grep "^${1}=" | awk -F '"' '{print $2}' 2>/dev/null)
+}
+
+WORKDIR=$(getEnvVal WORKDIR)
+IMAGE_ROOTFS=$(getEnvVal IMAGE_ROOTFS)
+D=$(getEnvVal D)
+S=$(getEnvVal S)
+B=$(getEnvVal B)
+
+cd $out
+list="WORKDIR IMAGE_ROOTFS D S B"
+for l in $list; do
+#  eval "rm -rf $l; ln -sf \${${l}} $l"
+  eval "rm -rf $l"
+  eval "ln -sf \${${l}} $l"
+done 
+
+

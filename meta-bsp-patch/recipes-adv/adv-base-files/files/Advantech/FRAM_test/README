@@ -1,0 +1,9 @@
+# 
+# FRAM SPI device read/write test script
+# call cmd "adveeprom_test"
+# 
+# Usage: ./adveeprom_test [TESTMODE] [args...] 
+#			-a : auto check bad block. 
+#			-w [offset] [context] : write context to nvram offset. 
+#			-r [offset] [length] : read context from nvram offset. 
+#

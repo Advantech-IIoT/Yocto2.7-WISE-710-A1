@@ -1,0 +1,6 @@
+#
+# CPU full loading test script
+#
+
+# Usage:
+./cputemp.sh <LOOP_TIME>

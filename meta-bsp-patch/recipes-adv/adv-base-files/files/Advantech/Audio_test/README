@@ -1,0 +1,189 @@
+# Audio test script
+#
+# About how to use amixer to operate a sound card. 
+# Following example was given.
+# 
+# Test models: WISE-710A1 + PCM-27J3AU
+# 
+# Sometimes, users may need to modify the /etc/asound.conf
+# file to specify the recording device (mic-in/line-in).
+#
+#######################################################
+# Check audio device
+# (get info: card 0, device 1)
+#######################################################
+root@localhost:~# aplay -l
+**** List of PLAYBACK Hardware Devices ****
+card 1: Audio [USB Audio], device 1: USB Audio [USB Audio #1]
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+
+#######################################################
+# Check the currently supported control options 
+# (use card 0, get numid)
+#######################################################
+root@localhost:~# amixer -c 1 controls
+numid=11,iface=MIXER,name='PCM Playback Switch'
+numid=12,iface=MIXER,name='PCM Playback Volume'
+numid=8,iface=MIXER,name='Line Capture Switch'
+numid=9,iface=MIXER,name='Line Capture Volume'
+numid=4,iface=MIXER,name='Mic Capture Switch'
+numid=5,iface=MIXER,name='Mic Capture Volume'
+numid=7,iface=MIXER,name='Extension Unit Switch'
+numid=6,iface=MIXER,name='Loudness'
+numid=10,iface=MIXER,name='Loudness',index=1
+numid=1,iface=PCM,name='Capture Channel Map'
+numid=2,iface=PCM,name='Capture Channel Map',device=1
+numid=3,iface=PCM,name='Playback Channel Map',device=1
+	  
+#######################################################
+# Check current output volume 
+# (use numid=12, get volume=127)
+#######################################################
+root@imx6dlwise710a1:~# amixer -c 1 cget numid=12
+numid=12,iface=MIXER,name='PCM Playback Volume'
+  ; type=INTEGER,access=rw---R--,values=2,min=0,max=127,step=0
+  : values=127,127
+  | dBminmax-min=-63.50dB,max=0.00dB
+
+#######################################################
+# Set output volume 
+# (use numid=12, set volume=60)
+#######################################################
+root@imx6dlwise710a1:~# amixer -c 1 cset numid=12 60
+numid=12,iface=MIXER,name='PCM Playback Volume'
+  ; type=INTEGER,access=rw---R--,values=2,min=0,max=127,step=0
+  : values=80,80
+  | dBminmax-min=-63.50dB,max=0.00dB
+		  
+#######################################################
+# play audio 
+# (aplay was only support WAV by default. If you want to 
+# play audio in other formats, please use libmad to decode 
+# it.)
+#######################################################
+root@localhost:~# aplay -D hw:1,1 /usr/Advantech/Audio_test/sound.wav
+Playing WAVE '/usr/Advantech/Audio_test/sound.wav' : Signed 16
+bit Little Endian, Rate 44100 Hz, Stereo
+
+#######################################################
+# build & install libmad 
+# (Due to copyright restrictions, we recommend that 
+# customers compile the libmad as following steps.)
+#######################################################
+
+cd /usr/Advantech/Audio_test/libmad-source/
+
+#
+# build & install libid3tag library
+#
+tar -zxvf libid3tag-0.15.1b.tar.gz
+cd libid3tag-0.15.1b  
+./configure
+make
+make install
+cd -
+
+#
+# build & install libmad library
+# If the compiler prompts the following error:
+# unrecognized command line option "-fforce-mem"
+# please delete all "-fforce-mem" in Makefile and recompile.
+#
+tar -zxvf libmad-0.15.1b.tar.gz  
+cd libmad-0.15.1b
+./configure --with-alsa
+make
+make install
+cd -
+
+#
+# build & install madplay tool
+#
+tar -zxvf madplay-0.15.2b.tar.gz
+cd madplay-0.15.2b  
+./configure
+make
+make install
+cd -
+
+#
+# update soft links
+#
+ln -s  /usr/local/lib/libmad.so.0  /usr/lib/libmad.so.0
+ln -s  /usr/local/lib/libid3tag.so.0  /usr/lib/libid3tag.so.0
+
+#
+# play mp3  
+#
+madplay -o wav:- xxx.mp3 | aplay
+
+#######################################################
+# Check input device
+# (get info: Mic card 0, device 0; Line card 0, device 1)
+#######################################################
+root@localhost:~# arecord -l
+**** List of CAPTURE Hardware Devices ****
+card 0: Audio [USB Audio], device 0: USB Audio [USB Audio]
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 0: Audio [USB Audio], device 1: USB Audio [USB Audio #1]
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+						  
+#######################################################
+# Check current mic-in volume 
+# (use numid=5, get volume=67)
+#######################################################
+root@localhost:~# amixer -c 0 cget numid=5
+numid=5,iface=MIXER,name='Mic Capture Volume'
+  ; type=INTEGER,access=rw---R--,values=2,min=0,max=127,step=0
+  : values=67,67
+  | dBminmax-min=-33.50dB,max=30.00dB
+							    
+#######################################################
+# Set mic-in volume 
+# (use numid=5, set volume=127)
+#######################################################
+root@localhost:~# amixer -c 0 cset numid=5 127
+numid=5,iface=MIXER,name='Mic Capture Volume'
+  ; type=INTEGER,access=rw---R--,values=2,min=0,max=127,step=0
+  : values=127,127
+  | dBminmax-min=-33.50dB,max=30.00dB
+
+#######################################################
+# Mic-in record 
+# (usr Mic-in card 0 device 0, 8s，wav，cd little-endian)
+#######################################################
+root@localhost:~# arecord -D plughw:0,0 -d 8 -f cd -t wav foobar.wav
+Recording WAVE 'foobar.wav' : Signed 16 bit
+Little Endian, Rate 44100 Hz, Stereo
+
+#######################################################
+# Check current line-in volume 
+# (use numid=9, get volume=67)
+#######################################################
+root@localhost:~# amixer -c 0 cget numid=9
+numid=9,iface=MIXER,name='Line Capture Volume'
+  ; type=INTEGER,access=rw---R--,values=2,min=0,max=127,step=0									    
+  : values=67,67										  
+  | dBminmax-min=-33.50dB,max=30.00dB
+										    
+#######################################################
+# Set line-in volume 
+# (use numid=9, set volume=127)
+#######################################################										  
+root@localhost:~# amixer -c 0 cset numid=9 127
+numid=9,iface=MIXER,name='Line Capture Volume'										    
+  ; type=INTEGER,access=rw---R--,values=2,min=0,max=127,step=0		
+  : values=127,127											    
+  | dBminmax-min=-33.50dB,max=30.00dB
+
+#######################################################
+# Line-in record 
+# (usr line-in card 0 device 1, 8s，wav，cd little-endian)
+#######################################################
+root@localhost:~# arecord -D plughw:0,1 -d 8 -f cd -t wav foobar.wav
+Recording WAVE 'foobar.wav' : Signed 16 bit
+Little Endian, Rate 44100 Hz, Stereo
+

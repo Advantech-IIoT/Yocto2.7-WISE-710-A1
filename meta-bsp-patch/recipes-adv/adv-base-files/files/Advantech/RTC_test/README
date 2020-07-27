@@ -1,0 +1,16 @@
+# 
+# RTC chip read/write test script
+# call cmd "hwclock"
+# 
+# Usage: ./RTC_test.sh 
+#        ./time_chk.sh [Year|Month|Day|[DayofWeek]|Hour|Minute|Second|Tolerance]
+#        ./up_time.sh [Year|Month|Day|DayofWeek|Hour|Minute|Second]
+#
+# DayifWeek - MON 00
+#           - TUE 01
+#           - WED 02
+#           - THU 03
+#           - FRI 04
+#           - SAT 05
+#           - SUN 06
+#

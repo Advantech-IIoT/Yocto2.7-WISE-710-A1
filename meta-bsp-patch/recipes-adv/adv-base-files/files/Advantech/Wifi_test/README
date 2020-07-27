@@ -1,0 +1,12 @@
+#
+# wifi login test script
+#
+# support module list(WISE-710):
+# RTL8821AE(EWM-W157H01E)
+# AR9382(EWM-W135H01E)
+#
+# Usage: 
+# ./wpa_test.sh [SSID] [PASSWD] 
+# ./wpa_nopwd_test.sh [SSID]
+# ./wpa_off.sh
+#

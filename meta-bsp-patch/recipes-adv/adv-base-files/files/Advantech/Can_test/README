@@ -1,0 +1,43 @@
+# 
+# i.MX6 flex can test tools
+# call cmd "readCAN" / "sendCAN"
+# 
+# Usage: 
+# ./readCAN <device> <timeout>
+# ./sendCAN <device>
+
+# Open flexCAN device
+ip link set can0 down
+ip link set can0 up type can bitrate 125000 loopback off
+ip link set can0 up
+
+# Receiver message from can0 (timeout 10s)
+./readCAN can0 10
+
+# Send message to can0 
+./sendCAN can0
+
+######################################################
+# Or you can use cmdline tool to i.MX6 flexCAN test:
+
+# First check can interface & index
+cat /sys/class/net/can0/uevent
+INTERFACE=can0 
+IFINDEX=3 
+
+# Then Open flexCAN device (BITRATE=5000)
+ip link set can0 down
+ip link set can0 type can bitrate 50000 loopback off
+ip link set can0 up
+
+# Check can status
+ip -details link show can0  
+
+# Send message "123#11"
+cansend can0 123#11
+
+# Recv message 
+candump  can0
+
+# Use 'Ctrl+c' to terminated test
+

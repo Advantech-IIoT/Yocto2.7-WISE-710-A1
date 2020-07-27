@@ -1,0 +1,39 @@
+#
+# 3G/LTE dialing test script
+#
+# Description: Initialize the 4G module and connect to the base station
+#
+# support module list(WISE-710):
+# u-blox TOBY-L200(EWM-C117FL01E) for USA AT&T, T-Mobile
+# u-blox TOBY-L210(EWM-C117FL01E) for Europe, APAC
+# u-blox TOBY-L210H-60S(EWM-C117FL01E) for Japan
+# u-blox TOBY-L280H(EWM-C117FL01E) for Taiwan
+#
+
+# Usage:
+./w4g_setup.sh <simPin> <apn> <username> <password>
+
+# Parameter:
+<simPin>: The SIM pin code (optional)
+<apn>: The Access Point Name (optional)
+<username>: The username for carrier (optional)
+<password>: The password for carrier (optional)
+
+# Example 1: Unlock SIM pin, create PDP context with APN, and connect to the 
+# base station
+./w4g_setup.sh "0000" "internet"
+
+# Example 2: Unlock SIM pin, create PDP context with APN, username, password 
+# and connect to the base station
+./w4g_setup.sh "0000" "lte-d.ocn.ne.jp" "mobileid@ocn" "mobile"
+
+# Example 3: Overwrite APN, username, password and reconnect to the base 
+# station
+./w4g_setup.sh "" "lte-d.ocn.ne.jp" "mobileid@ocn" "mobile"
+
+# Example 4: Unlock SIM pin, china unicom
+./w4g_setup.sh "0000" "UNINET" "CARD" "CARD"
+
+# Test SIM slot
+./test_sim_slot.sh
+

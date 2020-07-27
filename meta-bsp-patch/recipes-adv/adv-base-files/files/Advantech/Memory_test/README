@@ -1,0 +1,11 @@
+# memory stress test script
+# call cmd "memtester"
+# 
+# Usage: ./memtest.sh <LOOP_TIME>
+# 
+
+# Check memory info
+cat /proc/meminfo
+
+# Check memory total size
+cat /proc/meminfo |grep MemTotal

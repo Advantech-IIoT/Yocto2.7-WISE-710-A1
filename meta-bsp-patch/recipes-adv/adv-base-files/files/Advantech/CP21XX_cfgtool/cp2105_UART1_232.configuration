@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="ASCII"?>
+<document:XMLDocument xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:document="http://www.silabs.com/config/document/document.ecore">
+  <documentObject id="cp2105" version="1.0">
+    <propertyValue propertyId="cp2105.portConfig.EnhancedFxn_ECI" value="28"/>
+    <propertyValue propertyId="cp2105.portConfig.GPIO1_ECI.latchControl" value="6"/>
+    <propertyValue propertyId="cp2105.portConfig.GPIO1_ECI.outputMode" value="true"/>
+    <propertyValue propertyId="cp2105.portConfig.GPIO1_ECI.resetLatchValue" value="false"/>
+    <propertyValue propertyId="cp2105.portConfig.GPIO1_ECI.suspendLatchValue" value="false"/>
+    <propertyValue propertyId="cp2105.portConfig.Mode" value="22865"/>
+    <propertyValue propertyId="cp2105.portConfig.RI_SCI.resetLatchValue" value="false"/>
+    <propertyValue propertyId="cp2105.portConfig.Reset_Latch" value="63486"/>
+    <propertyValue propertyId="cp2105.portConfig.Suspend_Latch" value="63230"/>
+    <propertyValue propertyId="cp2105.portConfig.mode.ECI" value="0"/>
+    <propertyValue propertyId="cp210x_base.set_ids.manufacturerString" value="Silicon Lab"/>
+    <propertyValue propertyId="cp210x_base.set_ids.productString" value="CP2105 Dual USB to UART Bridge Controller"/>
+    <propertyValue propertyId="cp210x_base.set_ids.serialString" value="009B6E55"/>
+  </documentObject>
+</document:XMLDocument>

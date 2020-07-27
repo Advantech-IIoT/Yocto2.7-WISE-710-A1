@@ -1,0 +1,7 @@
+# 
+# i.MX6 Brightness test tools
+# 
+# Usage: 
+# ./brightnesstest.sh <LOOP_TIME>
+# 
+

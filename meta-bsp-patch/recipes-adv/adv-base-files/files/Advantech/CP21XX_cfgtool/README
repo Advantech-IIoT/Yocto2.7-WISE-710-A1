@@ -1,0 +1,56 @@
+# 
+# CP21XX chipset configure tool
+# call cmd "config_cp2105.sh" or "config-cp2108.sh"
+#
+
+# 
+# Usage: 
+# ./config-cp2105.sh 232|485
+# ./config-cp2108.sh 232|485
+#
+
+# 
+# ========== [WISE-710] ==========
+# Hardware switch set:
+# COM1 232 mode: SW9 Bit 1,3,6 ON. Bit 2,4,5,7,8 OFF.
+# COM1 485 mode: SW9 Bit 1,3,5,8 ON. Bit 2,4,6,7 OFF. Bit 7 receiver termination.
+# COM1 debug console mode: SW9 Bit 2,4,6 ON. Bit 1,3,5,7,8 OFF.
+#
+# COM2 485 mode: SW11 Bit 1, 3 ON. Bit 2, 4 OFF.
+# COM2 CAN mode: SW11 Bit 2, 4 ON. Bit 1, 3 OFF.
+#
+
+# Device first boot config
+# (ttyUSB0:232, ttyUSB2:485, ttyUSB3:485)
+./config-cp2108.sh 232 factory
+
+# Device first boot config
+# (ttyUSB0:485, ttyUSB2:485, ttyUSB3:485)
+./config-cp2108.sh 485 factory
+
+# Change ttyUSB0 mode to 232
+./config-cp2108.sh 232
+
+# Change ttyUSB0 mode to 485
+./config-cp2108.sh 485
+
+#
+# ========== [TPC-71W] ==========
+# Hardware switch set:
+# COM1 232 mode(Only rx/tx): SW9 Bit 1,3,5,7 ON. Bit 2,4,6,8 OFF. SW10 Bit 2 ON. Bit 1,3,4 OFF.
+# COM1 485 mode: SW9 Bit 1,3,5,7 ON. Bit 2,4,6,8 OFF. SW10 Bit 1,4 ON. Bit 2,3 OFF.
+# COM1 CAN mode: SW9 Bit 6,8 ON. Bit 1,2,3,4,5,7 OFF. SW10 Bit 1,2,3,4 OFF.
+# COM1 debug console mode: SW9 Bit 2,4,5,7 ON. Bit 1,3,6,8 OFF. SW10 Bit 2 ON. Bit 1,3,4 OFF.
+# 
+
+# Device first boot config
+# (ttyUSB0:485/232 rx-tx only)
+./config-cp2105.sh 485
+
+# Device first boot config
+# (ttyUSB0:232 Full DB9)
+./config-cp2105.sh 232
+
+# Change ttyUSB0 mode
+# CP2105(OTP chip) does not support repeated config.
+

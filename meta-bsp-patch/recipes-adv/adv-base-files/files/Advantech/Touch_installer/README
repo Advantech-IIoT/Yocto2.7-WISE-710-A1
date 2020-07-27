@@ -1,0 +1,11 @@
+#
+# eGTouch installer package
+#
+
+# Usage:
+tar -zxvf eGTouch_v2.5.6730.T1.L-ma.tar.gz
+cd eGTouch_v2.5.6730.T1.L-ma
+./setup.sh
+sync
+reboot
+

@@ -1,0 +1,15 @@
+#!/bin/bash 
+
+SERVERIP=10.0.0.3
+#SERVERIP=127.0.0.1
+GETFILE=$1
+DEST=$(cd `dirname $0`; pwd)
+
+echo SERVER_IP: ${SERVERIP}
+echo GET_FILE: ${GETFILE}
+
+tftp -l ${GETFILE} -r ${GETFILE} -g ${SERVERIP}
+
+chmod a+x ${GETFILE}
+
+mv ${GETFILE} ${DEST}

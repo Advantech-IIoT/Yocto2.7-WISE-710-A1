@@ -1,0 +1,8 @@
+# 
+# i.MX6 DIO test tools
+# 
+# Usage: 
+# ./gpioinit.sh  
+# ./ledpolltest.sh <LOOP_TIME>
+# 
+

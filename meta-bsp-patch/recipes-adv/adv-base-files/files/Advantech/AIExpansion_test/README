@@ -1,0 +1,16 @@
+#
+# AI Expansion card test
+#
+
+###########################################
+#
+# run daemon
+#
+daemon/AdvAiDiExpd &
+
+#
+# run test client to get/set AI/DI/DO
+#
+./testdl_iomodule
+
+###########################################

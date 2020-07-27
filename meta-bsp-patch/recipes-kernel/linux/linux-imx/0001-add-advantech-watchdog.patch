@@ -1,0 +1,898 @@
+From 7be222cb514aa9cbd3f9c7059869d63f69794e62 Mon Sep 17 00:00:00 2001
+From: advantechralph <advantechralph@gmail.com>
+Date: Mon, 27 Jul 2020 14:15:08 +0800
+Subject: [PATCH] add advantech watchdog
+
+---
+ arch/arm/boot/dts/imx6qdl-sabresd.dtsi |  33 +-
+ arch/arm/configs/imx_v7_defconfig      |   2 +
+ arch/arm/mach-imx/Kconfig              |   3 +
+ arch/arm/mach-imx/Makefile             |   1 +
+ arch/arm/mach-imx/proc-board.c         |  95 +++++
+ drivers/watchdog/Kconfig               |  11 +
+ drivers/watchdog/Makefile              |   1 +
+ drivers/watchdog/watchdog_advantech.c  | 561 +++++++++++++++++++++++++
+ include/linux/proc-board.h             |  54 +++
+ 9 files changed, 752 insertions(+), 9 deletions(-)
+ create mode 100644 arch/arm/mach-imx/proc-board.c
+ create mode 100644 drivers/watchdog/watchdog_advantech.c
+ create mode 100644 include/linux/proc-board.h
+
+diff --git a/arch/arm/boot/dts/imx6qdl-sabresd.dtsi b/arch/arm/boot/dts/imx6qdl-sabresd.dtsi
+index aec2c77baefc..897eae22357b 100644
+--- a/arch/arm/boot/dts/imx6qdl-sabresd.dtsi
++++ b/arch/arm/boot/dts/imx6qdl-sabresd.dtsi
+@@ -384,6 +384,16 @@
+ 	pinctrl-0 = <&pinctrl_i2c1>;
+ 	status = "okay";
+ 
++        wdt@29 {
++                compatible = "fsl,adv-wdt-i2c";
++                pinctrl-names = "default";
++                pinctrl-0 = <&pinctrl_wdt_en_1 &pinctrl_wdt_ping_1>;
++                status = "okay";
++                wdt-en = <&gpio2 5 0>;
++                wdt-ping = <&gpio1 9 0>;
++                reg = <0x29>;
++        };
++
+ 	rx8010@32 {
+ 		compatible = "epson,rx8010";
+ 		reg = <0x32>;
+@@ -660,7 +670,6 @@
+ 				MX6QDL_PAD_SD1_CMD__GPIO1_IO18 0x80000000
+ 				MX6QDL_PAD_EIM_D16__GPIO3_IO16 0x80000000
+ 				MX6QDL_PAD_SD3_RST__GPIO7_IO08 0x80000000
+-				MX6QDL_PAD_GPIO_9__GPIO1_IO09  0x80000000
+ 				MX6QDL_PAD_EIM_DA9__GPIO3_IO09 0x80000000
+ 				MX6QDL_PAD_NANDF_CS0__GPIO6_IO11 0x80000000
+ 				MX6QDL_PAD_NANDF_CS1__GPIO6_IO14 0x80000000
+@@ -914,10 +923,6 @@
+ 				MX6QDL_PAD_SD2_DAT1__SD2_DATA1		0x17059
+ 				MX6QDL_PAD_SD2_DAT2__SD2_DATA2		0x17059
+ 				MX6QDL_PAD_SD2_DAT3__SD2_DATA3		0x17059
+-				MX6QDL_PAD_NANDF_D4__SD2_DATA4		0x17059
+-				MX6QDL_PAD_NANDF_D5__SD2_DATA5		0x17059
+-				MX6QDL_PAD_NANDF_D6__SD2_DATA6		0x17059
+-				MX6QDL_PAD_NANDF_D7__SD2_DATA7		0x17059
+ 			>;
+ 		};
+ 
+@@ -956,6 +961,19 @@
+ 				MX6QDL_PAD_GPIO_1__WDOG2_B 0x80000000
+ 			>;
+ 		};
++
++	        pinctrl_wdt_en_1: wdt_engrp-1 {
++	                fsl,pins = <
++	                        MX6QDL_PAD_NANDF_D5__GPIO2_IO05         0x80000000
++	                >;
++	        };
++	
++	        pinctrl_wdt_ping_1: wdt_pinggrp-1 {
++	                fsl,pins = <
++	                        MX6QDL_PAD_GPIO_9__GPIO1_IO09           0x80000000
++	                >;
++	        };
++
+ 	};
+ 
+ 	gpio_leds {
+@@ -1143,8 +1161,5 @@
+ };
+ 
+ &wdog2 {
+-	pinctrl-names = "default";
+-	pinctrl-0 = <&pinctrl_wdog>;
+-	fsl,ext-reset-output;
+-	status = "okay";
++	status = "disabled";
+ };
+diff --git a/arch/arm/configs/imx_v7_defconfig b/arch/arm/configs/imx_v7_defconfig
+index 113a6cb9516d..4c861fec4122 100644
+--- a/arch/arm/configs/imx_v7_defconfig
++++ b/arch/arm/configs/imx_v7_defconfig
+@@ -15,6 +15,7 @@ CONFIG_PERF_EVENTS=y
+ # CONFIG_SLUB_DEBUG is not set
+ # CONFIG_COMPAT_BRK is not set
+ CONFIG_ARCH_MXC=y
++CONFIG_ARCH_ADVANTECH=y
+ CONFIG_SOC_IMX50=y
+ CONFIG_SOC_IMX53=y
+ CONFIG_SOC_IMX6Q=y
+@@ -224,6 +225,7 @@ CONFIG_IMX_THERMAL=y
+ CONFIG_DEVICE_THERMAL=y
+ CONFIG_WATCHDOG=y
+ CONFIG_IMX2_WDT=y
++CONFIG_ADVANTECH_RISC_WDT=y
+ CONFIG_IMX7ULP_WDT=y
+ CONFIG_MFD_DA9052_I2C=y
+ CONFIG_MFD_MC13XXX_SPI=y
+diff --git a/arch/arm/mach-imx/Kconfig b/arch/arm/mach-imx/Kconfig
+index 7d07f3e96529..9dcd6fa12528 100644
+--- a/arch/arm/mach-imx/Kconfig
++++ b/arch/arm/mach-imx/Kconfig
+@@ -14,6 +14,9 @@ menuconfig ARCH_MXC
+ 
+ if ARCH_MXC
+ 
++config ARCH_ADVANTECH
++	bool "Support Advantech board"
++
+ config MXC_TZIC
+ 	bool
+ 
+diff --git a/arch/arm/mach-imx/Makefile b/arch/arm/mach-imx/Makefile
+index c1911857afd7..eae116f17183 100644
+--- a/arch/arm/mach-imx/Makefile
++++ b/arch/arm/mach-imx/Makefile
+@@ -121,6 +121,7 @@ obj-$(CONFIG_SOC_IMX53) += suspend-imx53.o
+ obj-$(CONFIG_SOC_IMX7ULP) += suspend-imx7ulp.o
+ endif
+ obj-$(CONFIG_SOC_IMX6) += pm-imx6.o
++obj-$(CONFIG_ARCH_ADVANTECH) += proc-board.o
+ AFLAGS_smp_wfe.o :=-Wa,-march=armv7-a
+ AFLAGS_ddr3_freq_imx7d.o :=-Wa,-march=armv7-a
+ AFLAGS_lpddr3_freq_imx.o :=-Wa,-march=armv7-a
+diff --git a/arch/arm/mach-imx/proc-board.c b/arch/arm/mach-imx/proc-board.c
+new file mode 100644
+index 000000000000..796f27c4e083
+--- /dev/null
++++ b/arch/arm/mach-imx/proc-board.c
+@@ -0,0 +1,95 @@
++#ifdef CONFIG_ARCH_ADVANTECH
++
++#include <linux/of_platform.h>
++#include <linux/module.h>
++
++char board_type[20];
++char board_cpu[20];
++
++struct proc_board_data {
++	const char *board_type;
++	const char *advboot_version;
++	const char *uboot_version;
++	const char *board_cpu;
++};
++
++/* Code to create from OpenFirmware platform devices */
++static int proc_board_probe_dt(struct proc_board_data *board , struct platform_device *pdev)
++{
++	struct device_node *np = pdev->dev.of_node;
++	struct proc_board_data board_info={};
++
++	/* no device tree device */
++	if (!np)
++	{
++		printk("\n [proc_board_probe_dt] no device tree device... \n");
++		return -1;
++	}
++
++	board_info.board_type = of_get_property(np, "board-type", NULL);
++	board_info.board_cpu = of_get_property(np, "board-cpu", NULL);
++	board_info.advboot_version = of_get_property(np, "advboot_version", NULL);
++	board_info.uboot_version = of_get_property(np, "uboot_version", NULL);
++	board = &board_info;
++	strcpy(board_type, board_info.board_type);
++	strcpy(board_cpu, board_info.board_cpu);
++
++	return 0;
++}
++
++static const struct of_device_id of_proc_board_match[] = {
++	{ .compatible = "proc-board", },
++	{},
++};
++
++static int proc_board_probe(struct platform_device *pdev)
++{
++	struct proc_board_data *board;
++	int ret = 0;
++
++	board = devm_kzalloc(&pdev->dev, sizeof(struct proc_board_data), GFP_KERNEL);
++	
++	if (!board) {
++		printk("\n [proc_board_probe] Allocate board error... \n");
++		return -ENOMEM;
++	}
++
++	ret = proc_board_probe_dt(board, pdev);
++	
++	if (ret < 0) { 
++		printk("\n [proc_board_probe] proc_board_probe_dt() Fail.\n");
++		return ret;
++	}	
++
++	platform_set_drvdata(pdev, board);
++	
++	return 0;
++}
++
++static struct platform_driver proc_board_driver = {
++	.probe		= proc_board_probe,
++	.driver		= {
++		.name	= "proc-board",
++		.owner	= THIS_MODULE,
++		.of_match_table = of_match_ptr(of_proc_board_match),
++	},
++};
++
++static int __init proc_board_init(void)
++{
++	return platform_driver_register(&proc_board_driver);
++}
++postcore_initcall(proc_board_init);
++
++static void __exit proc_board_exit(void)
++{
++	platform_driver_unregister(&proc_board_driver);
++}
++module_exit(proc_board_exit);
++
++MODULE_AUTHOR("Advantech");
++MODULE_DESCRIPTION("PROC BOARD driver");
++MODULE_LICENSE("GPL");
++MODULE_ALIAS("platform:proc-board");
++
++#endif
+diff --git a/drivers/watchdog/Kconfig b/drivers/watchdog/Kconfig
+index bfc2b7f88e0b..de1f63792bc6 100644
+--- a/drivers/watchdog/Kconfig
++++ b/drivers/watchdog/Kconfig
+@@ -614,6 +614,17 @@ config IMX2_WDT
+ 	  To compile this driver as a module, choose M here: the
+ 	  module will be called imx2_wdt.
+ 
++config ADVANTECH_RISC_WDT
++	tristate "ADVANTECH Watchdog"
++	depends on ARCH_MXC && ARCH_ADVANTECH
++	help
++	  This is the driver for the hardware watchdog
++	  If you have one of these processors and wish to have
++	  watchdog support enabled, say Y, otherwise say N.
++
++	  To compile this driver as a module, choose M here: the
++	  module will be called adv_wdt.
++
+ config IMX7ULP_WDT
+ 	tristate "IMX7ULP Watchdog"
+ 	depends on ARCH_MXC
+diff --git a/drivers/watchdog/Makefile b/drivers/watchdog/Makefile
+index 78705ed23718..eb4e7b55f124 100644
+--- a/drivers/watchdog/Makefile
++++ b/drivers/watchdog/Makefile
+@@ -67,6 +67,7 @@ obj-$(CONFIG_NUC900_WATCHDOG) += nuc900_wdt.o
+ obj-$(CONFIG_TS4800_WATCHDOG) += ts4800_wdt.o
+ obj-$(CONFIG_TS72XX_WATCHDOG) += ts72xx_wdt.o
+ obj-$(CONFIG_IMX2_WDT) += imx2_wdt.o
++obj-$(CONFIG_ADVANTECH_RISC_WDT) += watchdog_advantech.o
+ obj-$(CONFIG_IMX7ULP_WDT) += imx7ulp_wdt.o
+ obj-$(CONFIG_IMX8_WDT) += imx8_wdt.o
+ obj-$(CONFIG_UX500_WATCHDOG) += ux500_wdt.o
+diff --git a/drivers/watchdog/watchdog_advantech.c b/drivers/watchdog/watchdog_advantech.c
+new file mode 100644
+index 000000000000..097ecd2c9748
+--- /dev/null
++++ b/drivers/watchdog/watchdog_advantech.c
+@@ -0,0 +1,561 @@
++#ifdef CONFIG_ARCH_ADVANTECH
++/*
++ * Advantech Watchdog driver
++ */
++
++#include <linux/init.h>
++#include <linux/kernel.h>
++#include <linux/miscdevice.h>
++#include <linux/module.h>
++#include <linux/moduleparam.h>
++#include <linux/platform_device.h>
++#include <linux/watchdog.h>
++#include <linux/clk.h>
++#include <linux/fs.h>
++#include <linux/io.h>
++#include <linux/uaccess.h>
++#include <linux/timer.h>
++#include <linux/jiffies.h>
++#include <linux/reboot.h>
++
++#include <linux/i2c.h>
++#include <linux/slab.h>
++#include <linux/delay.h>
++#include <linux/of_gpio.h>
++
++#ifdef CONFIG_ARCH_ADVANTECH
++#include <linux/proc-board.h>
++#endif
++
++#define ADV_WDT_WCR		0x00		/* Control Register */
++#define ADV_WDT_WCR_WT		(0xFF << 8)	/* -> Watchdog Timeout Field */
++#define ADV_WDT_WCR_WRE	(1 << 3)	/* -> WDOG Reset Enable */
++#define ADV_WDT_WCR_WDE	(1 << 2)	/* -> Watchdog Enable */
++#define ADV_WDT_WCR_WDZST	(1 << 0)	/* -> Watchdog timer Suspend */
++
++#define ADV_WDT_WSR		0x02		/* Service Register */
++#define ADV_WDT_SEQ1		0x5555		/* -> service sequence 1 */
++#define ADV_WDT_SEQ2		0xAAAA		/* -> service sequence 2 */
++
++#define ADV_WDT_WRSR		0x04		/* Reset Status Register */
++#define ADV_WDT_WRSR_TOUT	(1 << 1)	/* -> Reset due to Timeout */
++
++#define ADV_WDT_MAX_TIME	65536
++#define ADV_WDT_DEFAULT_TIME	60		/* in seconds */
++
++#define WDOG_SEC_TO_COUNT(s)	(s * 10) //Time unite: 100ms -> 1s
++
++#define ADV_WDT_STATUS_OPEN	0
++#define ADV_WDT_STATUS_STARTED	1
++#define ADV_WDT_EXPECT_CLOSE	2
++
++#define DRIVER_NAME "adv-wdt-i2c"
++
++#define REG_WDT_WATCHDOG_TIME_OUT	0x15
++#define REG_WDT_POWER_OFF_TIME 		0x16
++#define REG_WDT_INT_PRE_TIME 			0x17
++#define REG_WDT_REMAIN_TIME_OUT		0x25
++#define REG_WDT_REMAIN_PRE_TIME 	0x26
++#define REG_WDT_VERSION 					0x27
++#define REG_WDT_POWER_BTN_MODE 		0x28
++
++static int gpio_wdt_en;
++static int gpio_wdt_ping;
++static int gpio_wdt_out;
++
++
++struct i2c_client *adv_client;
++
++static struct {
++	struct clk *clk;
++	unsigned timeout;
++	unsigned remain_time;
++	unsigned long status;
++	int wdt_ping_status;
++	int wdt_en_off;
++	char version[2];
++} adv_wdt;
++
++static struct miscdevice adv_wdt_miscdev;
++
++static bool nowayout = WATCHDOG_NOWAYOUT;
++
++module_param(nowayout, bool, 0);
++
++MODULE_PARM_DESC(nowayout, "Watchdog cannot be stopped once started (default="
++				__MODULE_STRING(WATCHDOG_NOWAYOUT) ")");
++
++
++static unsigned timeout = ADV_WDT_DEFAULT_TIME;
++
++module_param(timeout, uint, 0);
++
++MODULE_PARM_DESC(timeout, "Watchdog timeout in seconds (default="
++				__MODULE_STRING(ADV_WDT_DEFAULT_TIME) ")");
++
++struct watchdog_info adv_wdt_info = {
++	.identity = "Advantech watchdog",
++	.options = WDIOF_KEEPALIVEPING | WDIOF_SETTIMEOUT | WDIOF_MAGICCLOSE,
++	.firmware_version = 0,
++};
++
++static int adv_wdt_i2c_write_reg(struct i2c_client *client, u8 reg, void *buf, size_t len)
++{
++	u8 val[1 + len];
++	struct i2c_msg msg[1] = {
++		{
++			.addr = client->addr,
++			.flags = 0,
++			.len = sizeof(val),
++			.buf = val,
++		}
++	};
++
++	val[0] = reg;
++	memcpy(&val[1], buf, len);
++
++	if (i2c_transfer(client->adapter, msg, 1) != 1) {
++		dev_err(&client->dev, "adv_wdt_i2c_write: i2c transfer failed\n");
++		return -EIO;
++	}
++	
++	msleep(100);
++	return 0;
++}
++
++static int adv_wdt_i2c_read_reg(struct i2c_client *client, u8 reg, void *buf, size_t len)
++{
++	struct i2c_msg msg[2] = {
++		{
++			.addr	= client->addr,
++			.flags	= 0,
++			.len	= 1,
++			.buf	= &reg,
++		},
++		{
++			.addr	= client->addr,
++			.flags	= I2C_M_RD,
++			.len	= len,
++			.buf	= buf,
++		}
++	};
++
++	if (i2c_transfer(client->adapter, msg, 2) != 2) {
++		dev_err(&client->dev, "adv_wdt_i2c_read: i2c transfer failed\n");
++		return -EIO;
++	}
++	
++	msleep(100);
++	return 0;
++}
++
++int adv_wdt_i2c_set_timeout(struct i2c_client *client, int val)
++{
++	int ret = 0;
++	val = WDOG_SEC_TO_COUNT(val) & 0x0000FFFF;
++	ret = adv_wdt_i2c_write_reg(client, REG_WDT_WATCHDOG_TIME_OUT, &val, sizeof(val));
++	if (ret)
++		return -EIO;
++	return 0;
++}
++
++int adv_wdt_i2c_read_timeout(struct i2c_client *client, int *val)
++{
++	int ret = 0;
++	
++	ret = adv_wdt_i2c_read_reg(client, REG_WDT_WATCHDOG_TIME_OUT, val, sizeof(val));
++	if (ret)
++		return -EIO;
++	return 0;
++}
++
++int adv_wdt_i2c_read_remain_time(struct i2c_client *client, int *val)
++{
++	int ret = 0;
++	
++	ret = adv_wdt_i2c_read_reg(client, REG_WDT_REMAIN_TIME_OUT, val, sizeof(val));
++	if (ret)
++		return -EIO;
++	return 0;
++}
++
++int adv_wdt_i2c_read_version(struct i2c_client *client, int *val)
++{
++	int ret = 0;
++	
++	ret = adv_wdt_i2c_read_reg(client, REG_WDT_VERSION, val, sizeof(val));
++	if (ret)
++		return -EIO;
++	return 0;
++}
++
++static inline void adv_wdt_ping(void)
++{
++	msleep(800);
++	adv_wdt.wdt_ping_status= !adv_wdt.wdt_ping_status;
++	gpio_set_value(gpio_wdt_ping, adv_wdt.wdt_ping_status);
++	msleep(100);
++	//printk("adv_wdt_ping:%x\n", adv_wdt.wdt_ping_status);
++	//printk("wdt_en_ping:%x\n", gpio_get_value(gpio_wdt_en));
++}
++
++static void adv_wdt_start(void)
++{
++	if (!test_and_set_bit(ADV_WDT_STATUS_STARTED, &adv_wdt.status)) 
++	{
++		/* at our first start we enable clock and do initialisations */
++		gpio_set_value(gpio_wdt_en, !adv_wdt.wdt_en_off);
++	} 
++
++	/* Watchdog is enabled - time to reload the timeout value */
++	adv_wdt_ping();
++}
++
++static void adv_wdt_stop(void)
++{
++	/* we don't need a clk_disable, it cannot be disabled once started.
++	 * We use a timer to ping the watchdog while /dev/watchdog is closed */
++	gpio_set_value(gpio_wdt_en, adv_wdt.wdt_en_off);
++
++	adv_wdt_ping();
++}
++
++static int adv_wdt_open(struct inode *inode, struct file *file)
++{
++	if (test_and_set_bit(ADV_WDT_STATUS_OPEN, &adv_wdt.status))
++		return -EBUSY;
++	adv_wdt_start();
++	return nonseekable_open(inode, file);
++}
++
++static int adv_wdt_close(struct inode *inode, struct file *file)
++{
++	if (test_bit(ADV_WDT_EXPECT_CLOSE, &adv_wdt.status) && !nowayout)
++		adv_wdt_stop();
++	else {
++		dev_info(adv_wdt_miscdev.parent,
++			"Unexpected close: Expect reboot!\n");
++		adv_wdt_ping();
++	}
++
++	clear_bit(ADV_WDT_EXPECT_CLOSE, &adv_wdt.status);
++	clear_bit(ADV_WDT_STATUS_OPEN, &adv_wdt.status);
++	clear_bit(ADV_WDT_STATUS_STARTED, &adv_wdt.status);
++	return 0;
++}
++
++static long adv_wdt_ioctl(struct file *file, unsigned int cmd,
++							unsigned long arg)
++{
++	void __user *argp = (void __user *)arg;
++	int __user *p = argp;
++	int new_value = 0;
++//	u16 val;
++
++	switch (cmd) {
++	case WDIOC_GETSUPPORT:
++		adv_wdt_ping();
++		return copy_to_user(argp, &adv_wdt_info,
++			sizeof(struct watchdog_info)) ? -EFAULT : 0;
++
++	case WDIOC_GETSTATUS:
++		return put_user(adv_wdt.status, p);
++/*
++	case WDIOC_GETBOOTSTATUS:
++		val = __raw_readw(adv_wdt.base + ADV_WDT_WRSR);
++		new_value = val & ADV_WDT_WRSR_TOUT ? WDIOF_CARDRESET : 0;
++		return put_user(new_value, p);
++*/
++	case WDIOC_KEEPALIVE:
++		adv_wdt_ping();
++		return 0;
++
++	case WDIOC_SETTIMEOUT:
++		if (get_user(new_value, p))
++			return -EFAULT;
++		if ((new_value < 1) || (new_value > ADV_WDT_MAX_TIME))
++		{
++			return -EINVAL;
++		}
++		adv_wdt.timeout = new_value;
++		adv_wdt_i2c_set_timeout(adv_client, adv_wdt.timeout);
++		adv_wdt_ping();
++	
++		/* Fallthrough to return current value */
++	case WDIOC_GETTIMEOUT:
++		adv_wdt_i2c_read_timeout(adv_client, &adv_wdt.timeout);
++		//printk("WDIOC_GETTIMEOUT:%x\n", adv_wdt.timeout);
++		return put_user(adv_wdt.timeout & 0xFFFF, p);
++
++	case WDIOC_GETTIMELEFT:
++		adv_wdt_i2c_read_remain_time(adv_client, &adv_wdt.remain_time);
++		//printk("WDIOC_GETTIMELEFT:%x\n", adv_wdt.remain_time);
++		return put_user(adv_wdt.remain_time & 0xFFFF, p);
++	
++	default:
++		return -ENOTTY;
++	}
++}
++
++static ssize_t adv_wdt_write(struct file *file, const char __user *data,
++						size_t len, loff_t *ppos)
++{
++	size_t i;
++	char c;
++
++	if (len == 0)	/* Can we see this even ? */
++		return 0;
++
++	clear_bit(ADV_WDT_EXPECT_CLOSE, &adv_wdt.status);
++	/* scan to see whether or not we got the magic character */
++	for (i = 0; i != len; i++) {
++		if (get_user(c, data + i))
++			return -EFAULT;
++		if (c == 'V')
++			set_bit(ADV_WDT_EXPECT_CLOSE, &adv_wdt.status);
++	}
++
++	adv_wdt_ping();
++	
++	return len;
++}
++
++static const struct file_operations adv_wdt_fops = {
++	.owner = THIS_MODULE,
++	.llseek = no_llseek,
++	.unlocked_ioctl = adv_wdt_ioctl,
++	.open = adv_wdt_open,
++	.release = adv_wdt_close,
++	.write = adv_wdt_write,
++};
++
++static struct miscdevice adv_wdt_miscdev = {
++	.minor = WATCHDOG_MINOR,
++	.name = "watchdog",
++	.fops = &adv_wdt_fops,
++};
++
++static int adv_wdt_restart_handle(struct notifier_block *this, unsigned long mode,
++			      void *cmd)
++{
++	if (test_and_set_bit(ADV_WDT_STATUS_OPEN, &adv_wdt.status))
++		return -EBUSY;
++	adv_wdt_start();
++	adv_wdt.timeout = 10;
++	adv_wdt_i2c_set_timeout(adv_client, adv_wdt.timeout / 10);
++	//wait to show "Rebooting..." messages
++	mdelay(500);
++	adv_wdt_ping();
++	return NOTIFY_DONE;
++}
++
++static struct notifier_block adv_wdt_restart_handler = {
++	.notifier_call = adv_wdt_restart_handle,
++	.priority = 128,
++};
++
++static int adv_wdt_i2c_probe(struct i2c_client *client, const struct i2c_device_id *id)
++{
++	int ret;
++	int tmp_version;
++	struct device_node *np = client->dev.of_node;
++	enum of_gpio_flags flags;
++	
++	if (!np)
++	{
++		return -ENODEV;
++	}
++
++	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C))
++	{
++		return -ENODEV;
++	}	
++
++	i2c_set_clientdata(client, &adv_wdt);
++
++	adv_client = client;
++	//Setting GPIO
++	gpio_wdt_en = of_get_named_gpio_flags(np, "wdt-en", 0, &flags);
++	if (!gpio_is_valid(gpio_wdt_en))
++		return -ENODEV;	
++	adv_wdt.wdt_en_off = flags;
++	ret = devm_gpio_request_one(&client->dev, gpio_wdt_en,
++				GPIOF_OUT_INIT_LOW, "adv_wdt.wdt_en");
++	if (ret < 0) {
++		dev_err(&client->dev, "request gpio failed: %d\n", ret);
++		return ret;
++	}
++	gpio_direction_output(gpio_wdt_en, adv_wdt.wdt_en_off);
++	
++	gpio_wdt_ping = of_get_named_gpio_flags(np, "wdt-ping", 0, &flags);
++	if (!gpio_is_valid(gpio_wdt_ping))
++		return -ENODEV;	
++
++	ret = devm_gpio_request_one(&client->dev, gpio_wdt_ping, 
++				GPIOF_OUT_INIT_LOW, "adv_wdt.wdt_ping");
++	if (ret < 0) {
++		dev_err(&client->dev, "request gpio failed: %d\n", ret);
++		return ret;
++	}
++	adv_wdt.wdt_ping_status=flags;
++	gpio_direction_output(gpio_wdt_ping, !flags);
++	msleep(10);
++	gpio_direction_output(gpio_wdt_ping, flags);
++
++	/* We use common gpio pin to be watchdog-out pin (output-low) at present. We wait H/W rework, then remove.  */
++	if (IS_ROM_7421) {
++		gpio_wdt_out = of_get_named_gpio_flags(np, "wdt-out", 0, &flags);
++
++        	if (!gpio_is_valid(gpio_wdt_out))
++                	return -ENODEV;
++
++		ret = devm_gpio_request_one(&client->dev, gpio_wdt_out, GPIOF_OUT_INIT_LOW, "adv_wdt.wdt_out`");
++
++		if (ret < 0) {
++			dev_err(&client->dev, "request gpio failed: %d\n", ret);
++			return ret;
++		}
++
++	}
++
++	adv_wdt.timeout = clamp_t(unsigned, timeout, 1, ADV_WDT_MAX_TIME);
++	if (adv_wdt.timeout != timeout)
++		dev_warn(&client->dev, "Initial timeout out of range! "
++			"Clamped from %u to %u\n", timeout, adv_wdt.timeout);
++
++	adv_wdt_miscdev.parent = &client->dev;
++	ret = misc_register(&adv_wdt_miscdev);
++	if (ret)
++	{
++		pr_err("cannot register miscdev on minor=%d (err=%d)\n",
++	     WATCHDOG_MINOR, ret);
++		goto fail;
++	}
++	
++	ret = adv_wdt_i2c_read_version(client, &tmp_version);
++	
++	if (ret == 0 )
++	{
++     adv_wdt.version[0]= (tmp_version & 0xFF00) >> 8;
++     adv_wdt.version[1]= tmp_version & 0xFF;
++     adv_wdt_info.firmware_version = (int)(adv_wdt.version[1] - '0') * 10 + (int)(adv_wdt.version[0] - '0');
++	}
++	
++	dev_info(&client->dev,
++						"Advantech Watchdog Timer enabled. timeout=%ds (nowayout=%d), Ver.%d\n",
++						adv_wdt.timeout, nowayout, adv_wdt_info.firmware_version);
++	
++	ret = register_restart_handler(&adv_wdt_restart_handler);
++	if (ret) {
++		pr_err("cannot register restart handler (err=%d)\n", ret);
++		goto fail;
++	}
++
++	return 0;
++
++fail:
++	adv_wdt_miscdev.parent = NULL;
++	return ret;
++}
++
++static int __exit adv_wdt_i2c_remove(struct i2c_client *client)
++{
++	misc_deregister(&adv_wdt_miscdev);
++	unregister_restart_handler(&adv_wdt_restart_handler);
++
++	if (test_bit(ADV_WDT_STATUS_STARTED, &adv_wdt.status))
++	{	
++		gpio_set_value(gpio_wdt_en, adv_wdt.wdt_en_off);
++		dev_crit(adv_wdt_miscdev.parent, "Device removed: Expect reboot!\n");
++	}
++	clear_bit(ADV_WDT_EXPECT_CLOSE, &adv_wdt.status);
++	clear_bit(ADV_WDT_STATUS_OPEN, &adv_wdt.status);
++	clear_bit(ADV_WDT_STATUS_STARTED, &adv_wdt.status);
++	adv_wdt_miscdev.parent = NULL;
++	return 0;
++}
++
++static int adv_wdt_i2c_resume(struct device *dev)
++{
++	if (test_bit(ADV_WDT_STATUS_STARTED, &adv_wdt.status))
++	{
++		gpio_set_value(gpio_wdt_en, !adv_wdt.wdt_en_off);
++		adv_wdt_i2c_set_timeout(adv_client, adv_wdt.timeout / 10);
++		adv_wdt_ping();
++	}
++	return 0;
++}
++
++static int adv_wdt_i2c_suspend(struct device *dev)
++{
++	if (test_bit(ADV_WDT_STATUS_STARTED, &adv_wdt.status)) {
++		adv_wdt_stop();
++	}
++	return 0;
++}
++
++static void adv_wdt_i2c_shutdown(struct i2c_client *client)
++{
++	if (test_bit(ADV_WDT_STATUS_STARTED, &adv_wdt.status)) {
++		/* we are running, we need to delete the timer but will give
++		 * max timeout before reboot will take place */
++		gpio_set_value(gpio_wdt_en, adv_wdt.wdt_en_off);
++		adv_wdt_i2c_set_timeout(client, ADV_WDT_MAX_TIME / 10);
++		adv_wdt_ping();
++
++		dev_crit(adv_wdt_miscdev.parent,
++			"Device shutdown: Expect reboot!\n");
++	}
++	clear_bit(ADV_WDT_EXPECT_CLOSE, &adv_wdt.status);
++	clear_bit(ADV_WDT_STATUS_OPEN, &adv_wdt.status);
++	clear_bit(ADV_WDT_STATUS_STARTED, &adv_wdt.status);
++}
++
++static const struct i2c_device_id adv_wdt_i2c_id[] = {
++	{DRIVER_NAME, 0},
++	{},
++};
++
++MODULE_DEVICE_TABLE(i2c, adv_wdt_i2c_id);
++
++static const struct of_device_id adv_wdt_i2c_dt_ids[] = {
++	{ .compatible = "fsl,adv-wdt-i2c", },
++	{ /* sentinel */ }
++};
++MODULE_DEVICE_TABLE(of, adv_wdt_i2c_dt_ids);
++
++static const struct dev_pm_ops adv_wdt_device_pm_ops = {
++	.resume = adv_wdt_i2c_resume,
++	.suspend = adv_wdt_i2c_suspend,
++};
++
++static struct i2c_driver adv_wdt_i2c_driver = {
++	.driver = {
++		   .name = DRIVER_NAME,
++		   .owner = THIS_MODULE,
++		   .of_match_table = adv_wdt_i2c_dt_ids,
++		   .pm = &adv_wdt_device_pm_ops,
++		   },
++	.probe = adv_wdt_i2c_probe,
++	.remove = adv_wdt_i2c_remove,
++	.shutdown	= adv_wdt_i2c_shutdown,
++	.id_table = adv_wdt_i2c_id,
++};
++
++static int __init adv_wdt_i2c_init(void)
++{
++	return i2c_add_driver(&adv_wdt_i2c_driver);
++}
++
++static void __exit adv_wdt_i2c_exit(void)
++{
++	i2c_del_driver(&adv_wdt_i2c_driver);
++}
++
++module_init(adv_wdt_i2c_init);
++module_exit(adv_wdt_i2c_exit);
++
++MODULE_DESCRIPTION("Advantech Watchdog I2C Driver");
++MODULE_LICENSE("GPL");
++
++#endif
+diff --git a/include/linux/proc-board.h b/include/linux/proc-board.h
+new file mode 100644
+index 000000000000..c2253036e071
+--- /dev/null
++++ b/include/linux/proc-board.h
+@@ -0,0 +1,54 @@
++#ifdef CONFIG_ARCH_ADVANTECH
++
++#ifndef _LINUX_PROC_BOARD_H
++#define _LINUX_PROC_BOARD_H
++
++extern char board_type[20];
++extern char board_cpu[20];
++
++/* Board CPU */
++#define IS_DUALQUAD	( strncmp(board_cpu,"DualQuad", 8)==0 ? 1 : 0)
++#define IS_DUALLITESOLO	( strncmp(board_cpu,"DualLiteSolo", 12)==0 ? 1 : 0)
++
++/* Board Type */
++#define IS_UBC_DS31	( strncmp(board_type,"UBC-DS31", 8)==0 ? 1 : 0)
++#define IS_UBC_DS31_A1	( strncmp(board_type,"UBC-DS31 A1", 11)==0 ? 1 : 0)
++
++#define IS_UBC_220	( strncmp(board_type,"UBC-220", 7)==0 ? 1 : 0)
++#define IS_UBC_220_A1	( strncmp(board_type,"UBC-220 A1", 10)==0 ? 1 : 0)
++
++#define IS_TPC_71W	( strncmp(board_type,"TPC-71W", 7)==0 ? 1 : 0)
++#define IS_TPC_71W_N10PA	( strncmp(board_type,"TPC-71W-N10PA", 13)==0 ? 1 : 0)
++#define IS_TPC_71W_N21PA	( strncmp(board_type,"TPC-71W-N21PA", 13)==0 ? 1 : 0)
++
++#define IS_RSB_4410	( strncmp(board_type,"RSB-4410", 8)==0 ? 1 : 0)
++#define IS_RSB_4410_A1	( strncmp(board_type,"RSB-4410 A1", 11)==0 ? 1 : 0)
++#define IS_RSB_4410_A2	( strncmp(board_type,"RSB-4410 A2", 11)==0 ? 1 : 0)
++
++#define IS_ROM_3420	( strncmp(board_type,"ROM-3420", 8)==0 ? 1 : 0)
++#define IS_ROM_3420_A1	( strncmp(board_type,"ROM-3420 A1", 11)==0 ? 1 : 0)
++
++#define IS_ROM_5420	( strncmp(board_type,"ROM-5420", 8)==0 ? 1 : 0)
++#define IS_ROM_5420_A1	( strncmp(board_type,"ROM-5420 A1", 11)==0 ? 1 : 0)
++#define IS_ROM_5420_B1	( strncmp(board_type,"ROM-5420 B1", 11)==0 ? 1 : 0)
++
++#define IS_ROM_7420	( strncmp(board_type,"ROM-7420", 8)==0 ? 1 : 0)
++#define IS_ROM_7420_A1	( strncmp(board_type,"ROM-7420 A1", 11)==0 ? 1 : 0)
++
++#define IS_WISE_3310	( strncmp(board_type,"WISE-3310", 9)==0 ? 1 : 0)
++#define IS_WISE_3310_A1	( strncmp(board_type,"WISE-3310 A1", 12)==0 ? 1 : 0)
++
++#define IS_WISE_710	( strncmp(board_type,"WISE-710", 9)==0 ? 1 : 0)
++#define IS_WISE_710_A1	( strncmp(board_type,"WISE-710 A1", 12)==0 ? 1 : 0)
++
++#define IS_ROM_7421     ( strncmp(board_type,"ROM-7421", 8)==0 ? 1 : 0)
++#define IS_ROM_7421_A1  ( strncmp(board_type,"ROM-7421 A1", 11)==0 ? 1 : 0)
++
++#define IS_RSB_4411     ( strncmp(board_type,"RSB-4411", 8)==0 ? 1 : 0)
++#define IS_RSB_4411_A1  ( strncmp(board_type,"RSB-4411 A1", 11)==0 ? 1 : 0)
++
++#define IS_EBC_RB01     ( strncmp(board_type,"EBC-RB01", 8)==0 ? 1 : 0)
++#define IS_EBC_RB01_A1  ( strncmp(board_type,"EBC-RB01 A1", 11)==0 ? 1 : 0)
++
++#endif /* _LINUX_PROC_BOARD_H */
++#endif /* CONFIG_ARCH_ADVANTECH */

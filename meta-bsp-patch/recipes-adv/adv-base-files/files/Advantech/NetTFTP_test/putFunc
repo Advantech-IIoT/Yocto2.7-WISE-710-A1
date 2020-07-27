@@ -1,0 +1,13 @@
+#!/bin/bash 
+
+SERVERIP=10.0.0.3
+#SERVERIP=127.0.0.1
+PUTFILE=$1
+DEST=$(cd `dirname $0`; pwd)
+
+echo SERVER_IP: ${SERVERIP}
+echo PUT_FILE: ${PUTFILE}
+
+cd ${DEST}
+tftp -l ${PUTFILE} -r ${PUTFILE} -p ${SERVERIP}
+

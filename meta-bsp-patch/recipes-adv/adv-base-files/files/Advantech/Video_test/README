@@ -1,0 +1,6 @@
+# video play test script
+# call cmd "gst-launch-1.0"
+# based on gstreamer library 
+# 
+# Usage: ./MediaPlayer_test.sh <PLAY TIMES> <FILE_ABSOLUTELY_PATH>
+# 

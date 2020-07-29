@@ -23,4 +23,5 @@ core-image-full-cmdline=$(shell realpath -m $(yoctoworkdir)/tmp/deploy/images/$(
 sdcardimage=core-image-full-cmdline
 
 CORE_IMAGE_EXTRA_INSTALL=" adv-base-files "
+EXTRA_IMAGE_FEATURES=" package-management "
 

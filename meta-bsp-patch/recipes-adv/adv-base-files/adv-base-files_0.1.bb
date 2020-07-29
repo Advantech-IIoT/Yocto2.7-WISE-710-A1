@@ -16,6 +16,7 @@ RDEPENDS_${PN} += " \
   nodejs \
   nodejs-npm \
   node-red \
+  node-red-contrib-modbus \
   e2fsprogs-resize2fs \
 "
 

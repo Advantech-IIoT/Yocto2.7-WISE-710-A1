@@ -13,6 +13,10 @@ RDEPENDS_${PN} += " \
   bash \
   expect \
   libxml2 \
+  nodejs \
+  nodejs-npm \
+  node-red \
+  e2fsprogs-resize2fs \
 "
 
 inherit useradd

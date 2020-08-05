@@ -1,0 +1,54 @@
+From 1ac56ec4a8d4c2124ae63615d9bf6354f3c02234 Mon Sep 17 00:00:00 2001
+From: advantechralph <advantechralph@gmail.com>
+Date: Wed, 5 Aug 2020 15:39:15 +0800
+Subject: [PATCH] rename sys class gpio
+
+---
+ drivers/gpio/gpiolib-sysfs.c | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/drivers/gpio/gpiolib-sysfs.c b/drivers/gpio/gpiolib-sysfs.c
+index 3dbaf489a8a5..de9fc5b04070 100644
+--- a/drivers/gpio/gpiolib-sysfs.c
++++ b/drivers/gpio/gpiolib-sysfs.c
+@@ -552,6 +552,10 @@ static struct class gpio_class = {
+ 	.class_groups = gpio_class_groups,
+ };
+ 
++#ifdef CONFIG_ARCH_ADVANTECH
++/* Rename gpio nodes in /sys/class/gpio */
++static int gpio_count = 1; 
++#endif
+ 
+ /**
+  * gpiod_export - export a GPIO through sysfs
+@@ -631,10 +635,18 @@ int gpiod_export(struct gpio_desc *desc, bool direction_may_change)
+ 	if (chip->names && chip->names[offset])
+ 		ioname = chip->names[offset];
+ 
++#ifdef CONFIG_ARCH_ADVANTECH
++	dev = device_create_with_groups(&gpio_class, &gdev->dev,
++					MKDEV(0, 0), data, gpio_groups,
++					ioname ? ioname : "gpio%u",
++					gpio_count);
++					gpio_count++; 
++#else
+ 	dev = device_create_with_groups(&gpio_class, &gdev->dev,
+ 					MKDEV(0, 0), data, gpio_groups,
+ 					ioname ? ioname : "gpio%u",
+ 					desc_to_gpio(desc));
++#endif
+ 	if (IS_ERR(dev)) {
+ 		status = PTR_ERR(dev);
+ 		goto err_free_data;
+@@ -724,6 +736,10 @@ void gpiod_unexport(struct gpio_desc *desc)
+ 
+ 	device_unregister(dev);
+ 
++#ifdef CONFIG_ARCH_ADVANTECH
++	gpio_count--; 
++#endif
++
+ 	/*
+ 	 * Release irq after deregistration to prevent race with edge_store.
+ 	 */

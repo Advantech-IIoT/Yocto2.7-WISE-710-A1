@@ -1,0 +1,77 @@
+From c7b340fce3c0bcfd64e94c17a4ed89a542ed8bdd Mon Sep 17 00:00:00 2001
+From: advantechralph <advantechralph@gmail.com>
+Date: Wed, 5 Aug 2020 19:03:23 +0800
+Subject: [PATCH] fine tune dts for gpio
+
+---
+ arch/arm/boot/dts/imx6dl.dtsi          |  5 ++---
+ arch/arm/boot/dts/imx6qdl-sabresd.dtsi | 19 +------------------
+ 2 files changed, 3 insertions(+), 21 deletions(-)
+
+diff --git a/arch/arm/boot/dts/imx6dl.dtsi b/arch/arm/boot/dts/imx6dl.dtsi
+index c85989485401..5ad6fcf0287d 100644
+--- a/arch/arm/boot/dts/imx6dl.dtsi
++++ b/arch/arm/boot/dts/imx6dl.dtsi
+@@ -212,9 +212,8 @@
+ 		      <&iomuxc 12 194 1>, <&iomuxc 13 193 1>, <&iomuxc 14 192 1>,
+ 		      <&iomuxc 15 191 1>, <&iomuxc 16 185 2>, <&iomuxc 18 184 1>,
+ 		      <&iomuxc 19 187 1>, <&iomuxc 20 183 1>, <&iomuxc 21 188 1>,
+-		      <&iomuxc 22 123 3>, <&iomuxc 25 121 1>, <&iomuxc 26 127 1>,
+-		      <&iomuxc 27 126 1>, <&iomuxc 28 128 1>, <&iomuxc 29 130 1>,
+-		      <&iomuxc 30 129 1>, <&iomuxc 31 122 1>;
++		      <&iomuxc 22 123 3>, <&iomuxc 26 127 1>, <&iomuxc 28 128 1>, 
++		      <&iomuxc 31 122 1>;
+ };
+ 
+ &gpio2 {
+diff --git a/arch/arm/boot/dts/imx6qdl-sabresd.dtsi b/arch/arm/boot/dts/imx6qdl-sabresd.dtsi
+index 05dd7239a3e4..67957d0de777 100644
+--- a/arch/arm/boot/dts/imx6qdl-sabresd.dtsi
++++ b/arch/arm/boot/dts/imx6qdl-sabresd.dtsi
+@@ -25,7 +25,7 @@
+ 		fsl,dcm_always_high;
+ 		fsl,dc_valid;
+ 		fsl,usb_valid;
+-		status = "okay";
++		status = "disabled";
+ 	};
+ 
+ 	hannstar_cabc {
+@@ -62,17 +62,6 @@
+ 			vin-supply = <&swbst_reg>;
+ 		};
+ 
+-		reg_usb_h1_vbus: regulator@1 {
+-			compatible = "regulator-fixed";
+-			reg = <1>;
+-			regulator-name = "usb_h1_vbus";
+-			regulator-min-microvolt = <5000000>;
+-			regulator-max-microvolt = <5000000>;
+-			gpio = <&gpio1 29 0>;
+-			enable-active-high;
+-			vin-supply = <&swbst_reg>;
+-		};
+-
+ 		reg_audio: regulator@2 {
+ 			compatible = "regulator-fixed";
+ 			reg = <2>;
+@@ -334,7 +323,6 @@
+ 	pinctrl-names = "default";
+ 	pinctrl-0 = <&pinctrl_enet>;
+ 	phy-mode = "rgmii";
+-	phy-reset-gpios = <&gpio1 25 GPIO_ACTIVE_LOW>;
+ 	fsl,magic-packet;
+ 	status = "okay";
+ };
+@@ -1097,11 +1085,6 @@
+ 	status = "okay";
+ };
+ 
+-&usbh1 {
+-	vbus-supply = <&reg_usb_h1_vbus>;
+-	status = "okay";
+-};
+-
+ &usbotg {
+ 	vbus-supply = <&reg_usb_otg_vbus>;
+ 	pinctrl-names = "default";

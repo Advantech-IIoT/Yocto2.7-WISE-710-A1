@@ -20,6 +20,7 @@ endif
 	@echo "$${extra_local_conf}" > $(yoctodir)/$(yoctobuilddir)/conf/extra-local.conf
 	@echo "CORE_IMAGE_EXTRA_INSTALL += \"$(CORE_IMAGE_EXTRA_INSTALL)\"" >> $(yoctodir)/$(yoctobuilddir)/conf/extra-local.conf
 	@echo "EXTRA_IMAGE_FEATURES += \"$(EXTRA_IMAGE_FEATURES)\"" >> $(yoctodir)/$(yoctobuilddir)/conf/extra-local.conf
+	@echo "UBOOT_CONFIG += \"$(UBOOT_CONFIG)\"" >> $(yoctodir)/$(yoctobuilddir)/conf/extra-local.conf
 	@ln -sf $(currdir)/yocto.build.mk $(yoctodir)/$(yoctobuilddir)/Makefile
 	@touch $@
 

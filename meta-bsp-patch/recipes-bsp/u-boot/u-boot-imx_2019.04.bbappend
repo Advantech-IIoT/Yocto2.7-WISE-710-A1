@@ -1,6 +1,7 @@
 FILESEXTRAPATHS_prepend := "${THISDIR}/${PN}:"
 
 SRC_URI += "file://0001-wise710a1.patch"
+SRC_URI += "file://0001-add-config-for-ddr.patch"
 
 UBOOT_MAKE_TARGET = "SPL u-boot.bin u-boot.imx u-boot-dtb.img u-boot_crc.bin"
 

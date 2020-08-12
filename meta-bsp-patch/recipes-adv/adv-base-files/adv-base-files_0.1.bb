@@ -18,6 +18,7 @@ RDEPENDS_${PN} += " \
   node-red \
   node-red-contrib-modbus \
   e2fsprogs-resize2fs \
+  i2c-tools \
 "
 
 inherit useradd

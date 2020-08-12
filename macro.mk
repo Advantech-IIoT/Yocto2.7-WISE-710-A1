@@ -22,7 +22,7 @@ fsl-image-qt5=$(shell realpath -m $(yoctoworkdir)/tmp/deploy/images/$(yoctomachi
 core-image-full-cmdline=$(shell realpath -m $(yoctoworkdir)/tmp/deploy/images/$(yoctomachine)/core-image-full-cmdline-$(yoctomachine).sdcard)
 sdcardimage=core-image-full-cmdline
 
-CORE_IMAGE_EXTRA_INSTALL=" adv-base-files "
-EXTRA_IMAGE_FEATURES=" package-management kernel-modules "
+CORE_IMAGE_EXTRA_INSTALL=" adv-base-files kernel-modules "
+EXTRA_IMAGE_FEATURES=" package-management "
 UBOOT_CONFIG = "1G"
 

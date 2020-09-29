@@ -6,6 +6,8 @@ SRC_URI += "file://0001-disable-i2c2-and-i2c3.patch"
 SRC_URI += "file://0001-rename-sys-class-gpio.patch"
 SRC_URI += "file://0001-fine-tune-dts-for-gpio.patch"
 SRC_URI += "file://0001-disable-auto-version.patch"
+SRC_URI += "file://0001-add-imx6dl-wise710-a1.dts.patch"
+SRC_URI += "file://0002-fix-watchdog-restart-handler-fatlal-problem.patch"
 
 LOCALVERSION = ""
 

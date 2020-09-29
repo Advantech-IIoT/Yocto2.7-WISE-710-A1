@@ -19,8 +19,10 @@ Usage:
     target: 
 
       <empty>                        Default target, show this usage.
+      usage                          Default target, show this usage.
+      help                           Default target, show this usage.
       info                           Show macro information
-      prepare                        Set up yocto layers. 
+      prepare                        Set up yocto layers and varaibles. 
       build                          Build core-image-minimal image. 
       buildqt5                       Build fsl-image-qt5 image. 
       buildcmdline                   Build core-image-full-cmdline image.
@@ -31,7 +33,7 @@ Usage:
                                                                
     parameter:                                                 
                                                                
-      YOCTO_WORK_DIR=[path]          Yocto working directory: downloads, tmp and i
+      YOCTO_WORK_DIR=[path]          Yocto working directory: downloads, tmp and 
                                      sstate_cache. 
 
   --------

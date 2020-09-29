@@ -20,6 +20,7 @@ yoctoworkdir=$(yoctodir)/$(yoctobuilddir)
 endif
 fsl-image-qt5=$(shell realpath -m $(yoctoworkdir)/tmp/deploy/images/$(yoctomachine)/fsl-image-qt5-$(yoctomachine).sdcard)
 core-image-full-cmdline=$(shell realpath -m $(yoctoworkdir)/tmp/deploy/images/$(yoctomachine)/core-image-full-cmdline-$(yoctomachine).sdcard)
+SPL=$(shell realpath -m $(yoctoworkdir)/tmp/deploy/images/$(yoctomachine)/SPL)
 sdcardimage=core-image-full-cmdline
 
 CORE_IMAGE_EXTRA_INSTALL=" adv-base-files kernel-modules "

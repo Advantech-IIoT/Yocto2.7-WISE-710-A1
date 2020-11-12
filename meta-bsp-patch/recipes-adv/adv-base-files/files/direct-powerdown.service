@@ -1,0 +1,11 @@
+[Unit]
+Description=Direct Power Off
+DefaultDependencies=no
+After=final.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/Advantech/systemd_service/powerdown.sh
+
+[Install]
+WantedBy=poweroff.target

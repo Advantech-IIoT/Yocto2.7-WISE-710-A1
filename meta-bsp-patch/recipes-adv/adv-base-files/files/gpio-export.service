@@ -1,0 +1,15 @@
+[Unit]
+Description=GPIO_export Service
+Requires=multi-user.target
+After=multi-user.target
+Requires=com_rs.service
+After=com_rs.service
+                                                                                                                                      
+[Service]
+Type=oneshot
+ExecStart=/usr/Advantech/systemd_service/gpio_export.sh
+StandardOutput=syslog
+StandardError=inherit
+ 
+[Install]
+WantedBy=multi-user.target

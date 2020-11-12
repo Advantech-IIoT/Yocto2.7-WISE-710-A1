@@ -10,3 +10,5 @@ fi
 
 cd /usr/Advantech/CP21XX_cfgtool
 ./auto-setting.sh
+
+exit 0; 

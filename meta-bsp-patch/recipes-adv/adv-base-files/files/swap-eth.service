@@ -1,0 +1,17 @@
+[Unit]
+Description=Swap Ethernet
+Before=network-pre.target
+Wants=network-pre.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/Advantech/systemd_service/swap_eth.sh
+ExecStop=
+StandardOutput=syslog
+StandardError=inherit
+KillMode=none
+SendSIGKILL=no
+RemainAfterExit=yes
+
+[Install]
+WantedBy=network.target

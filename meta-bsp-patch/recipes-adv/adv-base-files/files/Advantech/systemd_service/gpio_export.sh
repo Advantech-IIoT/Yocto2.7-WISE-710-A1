@@ -8,3 +8,5 @@ echo 204 > /sys/class/gpio/unexport
 sleep 1
 cd /usr/Advantech/GPIO_test
 ./gpioinit.sh
+
+exit 0; 

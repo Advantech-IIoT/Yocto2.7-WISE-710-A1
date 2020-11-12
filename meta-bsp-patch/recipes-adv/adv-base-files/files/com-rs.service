@@ -1,0 +1,13 @@
+[Unit]
+Description=COM1 RS232/485 Service
+Requires=multi-user.target
+After=multi-user.target
+                                                                                                                                      
+[Service]
+Type=oneshot
+ExecStart=/usr/Advantech/systemd_service/com_rs.sh
+StandardOutput=syslog
+StandardError=inherit
+ 
+[Install]
+WantedBy=multi-user.target

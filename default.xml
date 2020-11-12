@@ -29,7 +29,7 @@
     <linkfile dest="setup-environment" src="setup-environment"/>
     <linkfile dest="create_build_wise710a1.sh" src="create_build_wise710a1.sh"/>
     <linkfile dest="README-IMXBSP" src="README-IMXBSP"/>
-    <linkfile dest="README" src="README"/>
+    <linkfile dest="README" src="README-yocto"/>
   </project>
   <project remote="yocto" revision="6d2e12e79211b31cdf5ea824fb9a8be54ba9a9eb" name="poky" path="sources/poky" clone-depth="1"/>
   <project remote="yocto" revision="2142f7ded1b3115ccc21f7575fd83e2376247193" name="meta-freescale" path="sources/meta-freescale" clone-depth="1"/>

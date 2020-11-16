@@ -1,0 +1,2054 @@
+From 08f31a5473ff0c5692f0145c1fdc10c78e64553c Mon Sep 17 00:00:00 2001
+From: Ralph Wang <ralph.wang@advantech.com.tw>
+Date: Mon, 16 Nov 2020 16:47:28 +0800
+Subject: [PATCH] update for device tree and proc board data
+
+---
+ arch/arm/boot/dts/imx6dl-advantech.dtsi       |  484 +++++++
+ arch/arm/boot/dts/imx6dl-wise710-a1.dts       |  157 +--
+ .../boot/dts/imx6qdl-sabresd-advantech.dtsi   | 1110 +++++++++++++++++
+ arch/arm/mach-imx/proc-board.c                |    4 +
+ drivers/pci/controller/dwc/pci-imx6.c         |    2 +-
+ drivers/watchdog/watchdog_advantech.c         |    6 +-
+ fs/proc/Makefile                              |    2 +
+ fs/proc/advboot.c                             |   53 +
+ fs/proc/boardinfo.c                           |   34 +
+ fs/proc/uboot.c                               |   45 +
+ 10 files changed, 1758 insertions(+), 139 deletions(-)
+ create mode 100644 arch/arm/boot/dts/imx6dl-advantech.dtsi
+ create mode 100644 arch/arm/boot/dts/imx6qdl-sabresd-advantech.dtsi
+ create mode 100644 fs/proc/advboot.c
+ create mode 100644 fs/proc/boardinfo.c
+ create mode 100644 fs/proc/uboot.c
+
+diff --git a/arch/arm/boot/dts/imx6dl-advantech.dtsi b/arch/arm/boot/dts/imx6dl-advantech.dtsi
+new file mode 100644
+index 000000000000..5ad6fcf0287d
+--- /dev/null
++++ b/arch/arm/boot/dts/imx6dl-advantech.dtsi
+@@ -0,0 +1,484 @@
++// SPDX-License-Identifier: GPL-2.0
++//
++// Copyright 2013 Freescale Semiconductor, Inc.
++
++#include <dt-bindings/interrupt-controller/irq.h>
++#include "imx6dl-pinfunc.h"
++#include "imx6qdl.dtsi"
++
++/ {
++	aliases {
++		i2c3 = &i2c4;
++	};
++
++	cpus {
++		#address-cells = <1>;
++		#size-cells = <0>;
++
++		cpu0: cpu@0 {
++			compatible = "arm,cortex-a9";
++			device_type = "cpu";
++			reg = <0>;
++			next-level-cache = <&L2>;
++			operating-points = <
++				/* kHz    uV */
++				996000  1250000
++				792000  1175000
++				396000  1150000
++			>;
++			fsl,soc-operating-points = <
++				/* ARM kHz  SOC-PU uV */
++				996000	1175000
++				792000	1175000
++				396000	1175000
++			>;
++			clock-latency = <61036>; /* two CLK32 periods */
++			#cooling-cells = <2>;
++			clocks = <&clks IMX6QDL_CLK_ARM>,
++				 <&clks IMX6QDL_CLK_PLL2_PFD2_396M>,
++				 <&clks IMX6QDL_CLK_STEP>,
++				 <&clks IMX6QDL_CLK_PLL1_SW>,
++				 <&clks IMX6QDL_CLK_PLL1_SYS>,
++				 <&clks IMX6QDL_CLK_PLL1>,
++				 <&clks IMX6QDL_PLL1_BYPASS>,
++				 <&clks IMX6QDL_PLL1_BYPASS_SRC>;
++			clock-names = "arm", "pll2_pfd2_396m", "step",
++				      "pll1_sw", "pll1_sys", "pll1",
++				      "pll1_bypass", "pll1_bypass_src";
++			arm-supply = <&reg_arm>;
++			pu-supply = <&reg_pu>;
++			soc-supply = <&reg_soc>;
++		};
++
++		cpu@1 {
++			compatible = "arm,cortex-a9";
++			device_type = "cpu";
++			reg = <1>;
++			next-level-cache = <&L2>;
++			operating-points = <
++				/* kHz    uV */
++				996000  1250000
++				792000  1175000
++				396000  1150000
++			>;
++			fsl,soc-operating-points = <
++				/* ARM kHz  SOC-PU uV */
++				996000	1175000
++				792000	1175000
++				396000	1175000
++			>;
++			clock-latency = <61036>; /* two CLK32 periods */
++			clocks = <&clks IMX6QDL_CLK_ARM>,
++				 <&clks IMX6QDL_CLK_PLL2_PFD2_396M>,
++				 <&clks IMX6QDL_CLK_STEP>,
++				 <&clks IMX6QDL_CLK_PLL1_SW>,
++				 <&clks IMX6QDL_CLK_PLL1_SYS>;
++			clock-names = "arm", "pll2_pfd2_396m", "step",
++				      "pll1_sw", "pll1_sys";
++			arm-supply = <&reg_arm>;
++			pu-supply = <&reg_pu>;
++			soc-supply = <&reg_soc>;
++		};
++	};
++
++	reserved-memory {
++		#address-cells = <1>;
++		#size-cells = <1>;
++		ranges;
++
++		/* global autoconfigured region for contiguous allocations */
++		linux,cma {
++			compatible = "shared-dma-pool";
++			reusable;
++			size = <0x14000000>;
++			linux,cma-default;
++		};
++	};
++
++	soc {
++		busfreq {
++			compatible = "fsl,imx_busfreq";
++			clocks = <&clks IMX6QDL_CLK_PLL2_BUS>, <&clks IMX6QDL_CLK_PLL2_PFD2_396M>,
++				<&clks IMX6QDL_CLK_PLL2_198M>, <&clks IMX6QDL_CLK_ARM>,
++				<&clks IMX6QDL_CLK_PLL3_USB_OTG>, <&clks IMX6QDL_CLK_PERIPH>,
++				<&clks IMX6QDL_CLK_PERIPH_PRE>, <&clks IMX6QDL_CLK_PERIPH_CLK2>,
++				<&clks IMX6QDL_CLK_PERIPH_CLK2_SEL>, <&clks IMX6QDL_CLK_OSC>,
++				<&clks IMX6QDL_CLK_AXI_ALT_SEL>, <&clks IMX6QDL_CLK_AXI_SEL> ,
++				<&clks IMX6QDL_CLK_PLL3_PFD1_540M>;
++			clock-names = "pll2_bus", "pll2_pfd2_396m", "pll2_198m", "arm", "pll3_usb_otg", "periph",
++				"periph_pre", "periph_clk2", "periph_clk2_sel", "osc", "axi_alt_sel", "axi_sel", "pll3_pfd1_540m";
++			interrupts = <0 107 0x4>, <0 112 0x4>;
++			interrupt-names = "irq_busfreq_0", "irq_busfreq_1";
++			fsl,max_ddr_freq = <400000000>;
++		};
++
++		gpu: gpu@130000 {
++			compatible = "fsl,imx6dl-gpu", "fsl,imx6q-gpu";
++			reg = <0x130000 0x4000>, <0x134000 0x4000>,
++			      <0x10000000 0x0>, <0x0 0x8000000>;
++			reg-names = "iobase_3d", "iobase_2d",
++				    "phys_baseaddr", "contiguous_mem";
++			interrupts = <0 9 IRQ_TYPE_LEVEL_HIGH>,
++				     <0 10 IRQ_TYPE_LEVEL_HIGH>;
++			interrupt-names = "irq_3d", "irq_2d";
++			clocks = <&clks IMX6QDL_CLK_OPENVG_AXI>, <&clks IMX6QDL_CLK_GPU3D_AXI>,
++				 <&clks IMX6QDL_CLK_GPU2D_CORE>, <&clks IMX6QDL_CLK_GPU3D_CORE>,
++				 <&clks IMX6QDL_CLK_DUMMY>;
++			clock-names = "gpu2d_axi_clk", "gpu3d_axi_clk",
++				      "gpu2d_clk", "gpu3d_clk",
++				      "gpu3d_shader_clk";
++			resets = <&src 0>, <&src 3>;
++			reset-names = "gpu3d", "gpu2d";
++			power-domains = <&pd_pu>;
++		};
++
++		ocram: sram@905000 {
++			compatible = "mmio-sram";
++			reg = <0x905000 0x1B000>;
++			clocks = <&clks IMX6QDL_CLK_OCRAM>;
++		};
++
++		ocram_optee: sram@918000 {
++			compatible = "fsl,optee-lpm-sram";
++			reg = <0x918000 0x8000>;
++			overw_reg = <&ocram 0x905000 0x13000>;
++		};
++
++		aips1: aips-bus@2000000 {
++			iomuxc: iomuxc@20e0000 {
++				compatible = "fsl,imx6dl-iomuxc";
++			};
++
++			dcic2: dcic@20e8000 {
++				clocks = <&clks IMX6QDL_CLK_DCIC1 >,
++						<&clks IMX6QDL_CLK_DCIC2>; /* DCIC2 depend on DCIC1 clock in imx6dl*/
++				clock-names = "dcic", "disp-axi";
++			};
++
++			pxp: pxp@20f0000 {
++				compatible = "fsl,imx6dl-pxp-dma";
++				reg = <0x20f0000 0x4000>;
++				interrupts = <0 98 IRQ_TYPE_LEVEL_HIGH>;
++				clocks = <&clks IMX6QDL_CLK_IPU2>, <&clks IMX6QDL_CLK_DUMMY>;
++				clock-names = "pxp-axi", "disp-axi";
++				status = "disabled";
++			};
++
++			epdc: epdc@20f4000 {
++				compatible = "fsl,imx6dl-epdc";
++				reg = <0x20f4000 0x4000>;
++				interrupts = <0 97 IRQ_TYPE_LEVEL_HIGH>;
++				clocks = <&clks IMX6QDL_CLK_IPU2>, <&clks IMX6QDL_CLK_IPU2_DI1>;
++				clock-names = "epdc_axi", "epdc_pix";
++			};
++		};
++
++		aips2: aips-bus@2100000 {
++			mipi_dsi: mipi@21e0000 {
++				compatible = "fsl,imx6dl-mipi-dsi";
++				reg = <0x21e0000 0x4000>;
++				interrupts = <0 102 0x4>;
++				gpr = <&gpr>;
++				clocks = <&clks IMX6QDL_CLK_HSI_TX>, <&clks IMX6QDL_CLK_VIDEO_27M>;
++				clock-names = "mipi_pllref_clk", "mipi_cfg_clk";
++				status = "disabled";
++			};
++
++			i2c4: i2c@21f8000 {
++				#address-cells = <1>;
++				#size-cells = <0>;
++				compatible = "fsl,imx6q-i2c", "fsl,imx21-i2c";
++				reg = <0x21f8000 0x4000>;
++				interrupts = <0 35 IRQ_TYPE_LEVEL_HIGH>;
++				clocks = <&clks IMX6DL_CLK_I2C4>;
++				status = "disabled";
++			};
++		};
++	};
++
++	capture-subsystem {
++		compatible = "fsl,imx-capture-subsystem";
++		ports = <&ipu1_csi0>, <&ipu1_csi1>;
++	};
++
++	display-subsystem {
++		compatible = "fsl,imx-display-subsystem";
++		ports = <&ipu1_di0>, <&ipu1_di1>;
++	};
++};
++
++&gpio1 {
++	gpio-ranges = <&iomuxc  0 131 2>, <&iomuxc  2 137 8>, <&iomuxc 10 189 2>,
++		      <&iomuxc 12 194 1>, <&iomuxc 13 193 1>, <&iomuxc 14 192 1>,
++		      <&iomuxc 15 191 1>, <&iomuxc 16 185 2>, <&iomuxc 18 184 1>,
++		      <&iomuxc 19 187 1>, <&iomuxc 20 183 1>, <&iomuxc 21 188 1>,
++		      <&iomuxc 22 123 3>, <&iomuxc 26 127 1>, <&iomuxc 28 128 1>, 
++		      <&iomuxc 31 122 1>;
++};
++
++&gpio2 {
++	gpio-ranges = <&iomuxc  0 161 8>, <&iomuxc  8 208 8>, <&iomuxc 16  74 1>,
++		      <&iomuxc 17  73 1>, <&iomuxc 18  72 1>, <&iomuxc 19  71 1>,
++		      <&iomuxc 20  70 1>, <&iomuxc 21  69 1>, <&iomuxc 22  68 1>,
++		      <&iomuxc 23  79 2>, <&iomuxc 25 118 2>, <&iomuxc 27 117 1>,
++		      <&iomuxc 28 113 4>;
++};
++
++&gpio3 {
++	gpio-ranges = <&iomuxc  0 97  2>, <&iomuxc 2 105 8>, <&iomuxc 10 99 6>,
++		      <&iomuxc 16 81 16>;
++};
++
++&gpio4 {
++	gpio-ranges = <&iomuxc  5 136 1>, <&iomuxc  6 145 1>, <&iomuxc  7 150 1>,
++		      <&iomuxc  8 146 1>, <&iomuxc  9 151 1>, <&iomuxc 10 147 1>,
++		      <&iomuxc 11 152 1>, <&iomuxc 12 148 1>, <&iomuxc 13 153 1>,
++		      <&iomuxc 14 149 1>, <&iomuxc 15 154 1>, <&iomuxc 16  39 7>,
++		      <&iomuxc 23  56 1>, <&iomuxc 24  61 7>, <&iomuxc 31  46 1>;
++};
++
++&gpio5 {
++	gpio-ranges = <&iomuxc  0 120 1>, <&iomuxc  2 77 1>, <&iomuxc  4 76 1>,
++		      <&iomuxc  5  47 9>, <&iomuxc 14 57 4>, <&iomuxc 18 37 1>,
++		      <&iomuxc 19  36 1>, <&iomuxc 20 35 1>, <&iomuxc 21 38 1>,
++		      <&iomuxc 22  29 6>, <&iomuxc 28 19 4>;
++};
++
++&gpio6 {
++	gpio-ranges = <&iomuxc  0  23 6>, <&iomuxc  6  75 1>, <&iomuxc  7 156 1>,
++		      <&iomuxc  8 155 1>, <&iomuxc  9 170 1>, <&iomuxc 10 169 1>,
++		      <&iomuxc 11 157 1>, <&iomuxc 14 158 3>, <&iomuxc 17 204 1>,
++		      <&iomuxc 18 203 1>, <&iomuxc 19 182 1>, <&iomuxc 20 177 4>,
++		      <&iomuxc 24 175 1>, <&iomuxc 25 171 1>, <&iomuxc 26 181 1>,
++		      <&iomuxc 27 172 3>, <&iomuxc 30 176 1>, <&iomuxc 31  78 1>;
++};
++
++&gpio7 {
++	gpio-ranges = <&iomuxc 0 202 1>, <&iomuxc  1 201 1>, <&iomuxc  2 196 1>,
++		      <&iomuxc 3 195 1>, <&iomuxc  4 197 4>, <&iomuxc  8 205 1>,
++		      <&iomuxc 9 207 1>, <&iomuxc 10 206 1>, <&iomuxc 11 133 3>;
++};
++
++&gpr {
++	ipu1_csi0_mux {
++		compatible = "video-mux";
++		mux-controls = <&mux 0>;
++		#address-cells = <1>;
++		#size-cells = <0>;
++
++		port@0 {
++			reg = <0>;
++
++			ipu1_csi0_mux_from_mipi_vc0: endpoint {
++				remote-endpoint = <&mipi_vc0_to_ipu1_csi0_mux>;
++			};
++		};
++
++		port@1 {
++			reg = <1>;
++
++			ipu1_csi0_mux_from_mipi_vc1: endpoint {
++				remote-endpoint = <&mipi_vc1_to_ipu1_csi0_mux>;
++			};
++		};
++
++		port@2 {
++			reg = <2>;
++
++			ipu1_csi0_mux_from_mipi_vc2: endpoint {
++				remote-endpoint = <&mipi_vc2_to_ipu1_csi0_mux>;
++			};
++		};
++
++		port@3 {
++			reg = <3>;
++
++			ipu1_csi0_mux_from_mipi_vc3: endpoint {
++				remote-endpoint = <&mipi_vc3_to_ipu1_csi0_mux>;
++			};
++		};
++
++		port@4 {
++			reg = <4>;
++
++			ipu1_csi0_mux_from_parallel_sensor: endpoint {
++			};
++		};
++
++		port@5 {
++			reg = <5>;
++
++			ipu1_csi0_mux_to_ipu1_csi0: endpoint {
++				remote-endpoint = <&ipu1_csi0_from_ipu1_csi0_mux>;
++			};
++		};
++	};
++
++	ipu1_csi1_mux {
++		compatible = "video-mux";
++		mux-controls = <&mux 1>;
++		#address-cells = <1>;
++		#size-cells = <0>;
++
++		port@0 {
++			reg = <0>;
++
++			ipu1_csi1_mux_from_mipi_vc0: endpoint {
++				remote-endpoint = <&mipi_vc0_to_ipu1_csi1_mux>;
++			};
++		};
++
++		port@1 {
++			reg = <1>;
++
++			ipu1_csi1_mux_from_mipi_vc1: endpoint {
++				remote-endpoint = <&mipi_vc1_to_ipu1_csi1_mux>;
++			};
++		};
++
++		port@2 {
++			reg = <2>;
++
++			ipu1_csi1_mux_from_mipi_vc2: endpoint {
++				remote-endpoint = <&mipi_vc2_to_ipu1_csi1_mux>;
++			};
++		};
++
++		port@3 {
++			reg = <3>;
++
++			ipu1_csi1_mux_from_mipi_vc3: endpoint {
++				remote-endpoint = <&mipi_vc3_to_ipu1_csi1_mux>;
++			};
++		};
++
++		port@4 {
++			reg = <4>;
++
++			ipu1_csi1_mux_from_parallel_sensor: endpoint {
++			};
++		};
++
++		port@5 {
++			reg = <5>;
++
++			ipu1_csi1_mux_to_ipu1_csi1: endpoint {
++				remote-endpoint = <&ipu1_csi1_from_ipu1_csi1_mux>;
++			};
++		};
++	};
++};
++
++&gpt {
++	compatible = "fsl,imx6dl-gpt";
++};
++
++&hdmi {
++	compatible = "fsl,imx6dl-hdmi";
++};
++
++&ipu1_csi1 {
++	ipu1_csi1_from_ipu1_csi1_mux: endpoint {
++		remote-endpoint = <&ipu1_csi1_mux_to_ipu1_csi1>;
++	};
++};
++
++&ldb {
++	compatible = "fsl,imx6dl-ldb", "fsl,imx53-ldb";
++	clocks = <&clks IMX6QDL_CLK_LDB_DI0>, <&clks IMX6QDL_CLK_LDB_DI1>,
++		 <&clks IMX6QDL_CLK_IPU1_DI0_SEL>, <&clks IMX6QDL_CLK_IPU1_DI1_SEL>,
++		 <&clks IMX6QDL_CLK_IPU2_DI0_SEL>,
++		 <&clks IMX6QDL_CLK_LDB_DI0_DIV_3_5>, <&clks IMX6QDL_CLK_LDB_DI1_DIV_3_5>,
++		 <&clks IMX6QDL_CLK_LDB_DI0_DIV_7>, <&clks IMX6QDL_CLK_LDB_DI1_DIV_7>,
++		 <&clks IMX6QDL_CLK_LDB_DI0_DIV_SEL>, <&clks IMX6QDL_CLK_LDB_DI1_DIV_SEL>;
++	clock-names = "ldb_di0", "ldb_di1",
++		      "di0_sel", "di1_sel",
++		      "di2_sel",
++		      "ldb_di0_div_3_5", "ldb_di1_div_3_5",
++		      "ldb_di0_div_7", "ldb_di1_div_7",
++		      "ldb_di0_div_sel", "ldb_di1_div_sel";
++};
++
++&mipi_csi {
++	port@1 {
++		reg = <1>;
++		#address-cells = <1>;
++		#size-cells = <0>;
++
++		mipi_vc0_to_ipu1_csi0_mux: endpoint@0 {
++			reg = <0>;
++			remote-endpoint = <&ipu1_csi0_mux_from_mipi_vc0>;
++		};
++
++		mipi_vc0_to_ipu1_csi1_mux: endpoint@1 {
++			reg = <1>;
++			remote-endpoint = <&ipu1_csi1_mux_from_mipi_vc0>;
++		};
++	};
++
++	port@2 {
++		reg = <2>;
++		#address-cells = <1>;
++		#size-cells = <0>;
++
++		mipi_vc1_to_ipu1_csi0_mux: endpoint@0 {
++			reg = <0>;
++			remote-endpoint = <&ipu1_csi0_mux_from_mipi_vc1>;
++		};
++
++		mipi_vc1_to_ipu1_csi1_mux: endpoint@1 {
++			reg = <1>;
++			remote-endpoint = <&ipu1_csi1_mux_from_mipi_vc1>;
++		};
++	};
++
++	port@3 {
++		reg = <3>;
++		#address-cells = <1>;
++		#size-cells = <0>;
++
++		mipi_vc2_to_ipu1_csi0_mux: endpoint@0 {
++			reg = <0>;
++			remote-endpoint = <&ipu1_csi0_mux_from_mipi_vc2>;
++		};
++
++		mipi_vc2_to_ipu1_csi1_mux: endpoint@1 {
++			reg = <1>;
++			remote-endpoint = <&ipu1_csi1_mux_from_mipi_vc2>;
++		};
++	};
++
++	port@4 {
++		reg = <4>;
++		#address-cells = <1>;
++		#size-cells = <0>;
++
++		mipi_vc3_to_ipu1_csi0_mux: endpoint@0 {
++			reg = <0>;
++			remote-endpoint = <&ipu1_csi0_mux_from_mipi_vc3>;
++		};
++
++		mipi_vc3_to_ipu1_csi1_mux: endpoint@1 {
++			reg = <1>;
++			remote-endpoint = <&ipu1_csi1_mux_from_mipi_vc3>;
++		};
++	};
++};
++
++&mux {
++	mux-reg-masks = <0x34 0x00000007>, /* IPU_CSI0_MUX */
++			<0x34 0x00000038>, /* IPU_CSI1_MUX */
++			<0x0c 0x0000000c>, /* HDMI_MUX_CTL */
++			<0x0c 0x000000c0>, /* LVDS0_MUX_CTL */
++			<0x0c 0x00000300>, /* LVDS1_MUX_CTL */
++			<0x28 0x00000003>, /* DCIC1_MUX_CTL */
++			<0x28 0x0000000c>; /* DCIC2_MUX_CTL */
++};
++
++&vpu {
++	compatible = "fsl,imx6dl-vpu", "cnm,coda960";
++};
++
++&vpu_fsl {
++	iramsize = <0>;
++};
+diff --git a/arch/arm/boot/dts/imx6dl-wise710-a1.dts b/arch/arm/boot/dts/imx6dl-wise710-a1.dts
+index 726147a7879f..66a9af3233f5 100644
+--- a/arch/arm/boot/dts/imx6dl-wise710-a1.dts
++++ b/arch/arm/boot/dts/imx6dl-wise710-a1.dts
+@@ -2,149 +2,33 @@
+ //
+ // Copyright (C) 2013-2015 Freescale Semiconductor, Inc.
+ 
++/* 
++  Reference: 
++    - i.MX 6Solo/6DualLite Applications Processor Reference Manual 
++*/
++
+ /dts-v1/;
+ 
+-#include "imx6dl.dtsi"
+-#include "imx6qdl-sabresd.dtsi"
++#include "imx6dl-advantech.dtsi"
++#include "imx6qdl-sabresd-advantech.dtsi"
+ 
+ / {
+-	model = "Freescale i.MX6 DualLite SABRE Smart Device Board";
++	model = "Freescale i.MX6 DualLite WISE710";
+ 	compatible = "fsl,imx6dl-sabresd", "fsl,imx6dl";
+-};
+ 
+-&battery {
+-	offset-charger = <1485>;
+-	offset-discharger = <1464>;
+-	offset-usb-charger = <1285>;
++	board {
++		compatible = "proc-board";
++		board-type = "WISE-710-A2";
++		board-cpu = "DualLiteSolo";
++	};
++
+ };
+ 
+ &iomuxc {
+-	epdc {
+-		pinctrl_epdc_elan_touch: epdc_elan_touch_grp {
+-			fsl,pins = <
+-				MX6QDL_PAD_EIM_D28__GPIO3_IO28 0x80000000
+-				MX6QDL_PAD_EIM_DA8__GPIO3_IO08 0x80000000
+-				MX6QDL_PAD_EIM_A20__GPIO2_IO18 0x80000000
+-			>;
+-		};
+-
+-		pinctrl_epdc_0: epdcgrp-0 {
+-			fsl,pins = <
+-				MX6QDL_PAD_EIM_A16__EPDC_DATA00    0x80000000
+-				MX6QDL_PAD_EIM_DA10__EPDC_DATA01   0x80000000
+-				MX6QDL_PAD_EIM_DA12__EPDC_DATA02   0x80000000
+-				MX6QDL_PAD_EIM_DA11__EPDC_DATA03   0x80000000
+-				MX6QDL_PAD_EIM_LBA__EPDC_DATA04    0x80000000
+-				MX6QDL_PAD_EIM_EB2__EPDC_DATA05    0x80000000
+-				MX6QDL_PAD_EIM_CS0__EPDC_DATA06    0x80000000
+-				MX6QDL_PAD_EIM_RW__EPDC_DATA07     0x80000000
+-				MX6QDL_PAD_EIM_A21__EPDC_GDCLK     0x80000000
+-				MX6QDL_PAD_EIM_A22__EPDC_GDSP      0x80000000
+-				MX6QDL_PAD_EIM_A23__EPDC_GDOE      0x80000000
+-				MX6QDL_PAD_EIM_A24__EPDC_GDRL      0x80000000
+-				MX6QDL_PAD_EIM_D31__EPDC_SDCLK_P   0x80000000
+-				MX6QDL_PAD_EIM_D27__EPDC_SDOE      0x80000000
+-				MX6QDL_PAD_EIM_DA1__EPDC_SDLE      0x80000000
+-				MX6QDL_PAD_EIM_EB1__EPDC_SDSHR     0x80000000
+-				MX6QDL_PAD_EIM_DA2__EPDC_BDR0      0x80000000
+-				MX6QDL_PAD_EIM_DA4__EPDC_SDCE0     0x80000000
+-				MX6QDL_PAD_EIM_DA5__EPDC_SDCE1     0x80000000
+-				MX6QDL_PAD_EIM_DA6__EPDC_SDCE2     0x80000000
+-				>;
+-		};
+-	};
+ };
+ 
+ &epdc {
+-	pinctrl-names = "default";
+-	pinctrl-0 = <&pinctrl_epdc_0>;
+-	V3P3-supply = <&V3P3_reg>;
+-	VCOM-supply = <&VCOM_reg>;
+-	DISPLAY-supply = <&DISPLAY_reg>;
+-	status = "disabled";
+-};
+-
+-&i2c3 {
+-	elan@10 {
+-		pinctrl-names = "default";
+-		pinctrl-0 = <&pinctrl_epdc_elan_touch>;
+-		compatible = "elan,elan-touch";
+-		reg = <0x10>;
+-		interrupt-parent = <&gpio3>;
+-		interrupts = <28 IRQ_TYPE_EDGE_FALLING>;
+-		gpio_elan_cs = <&gpio2 18 0>;
+-		gpio_elan_rst = <&gpio3 8 0>;
+-		gpio_intr = <&gpio3 28 0>;
+-		status = "disabled";
+-	};
+-
+-        max17135@48 {
+-                compatible = "maxim,max17135";
+-		status = "disabled";
+-                reg = <0x48>;
+-                vneg_pwrup = <1>;
+-                gvee_pwrup = <1>;
+-                vpos_pwrup = <2>;
+-                gvdd_pwrup = <1>;
+-                gvdd_pwrdn = <1>;
+-                vpos_pwrdn = <2>;
+-                gvee_pwrdn = <1>;
+-                vneg_pwrdn = <1>;
+-                SENSOR-supply = <&reg_sensor>;
+-                gpio_pmic_pwrgood = <&gpio2 21 0>;
+-                gpio_pmic_vcom_ctrl = <&gpio3 17 0>;
+-                gpio_pmic_wakeup = <&gpio3 20 0>;
+-                gpio_pmic_v3p3 = <&gpio2 20 0>;
+-                gpio_pmic_intr = <&gpio2 25 0>;
+-
+-                regulators {
+-                        DISPLAY_reg: DISPLAY {
+-                                regulator-name = "DISPLAY";
+-                        };
+-
+-                        GVDD_reg: GVDD {
+-                                /* 20v */
+-                                regulator-name = "GVDD";
+-                        };
+-
+-                        GVEE_reg: GVEE {
+-                                /* -22v */
+-                                regulator-name = "GVEE";
+-                        };
+-
+-                        HVINN_reg: HVINN {
+-                                /* -22v */
+-                                regulator-name = "HVINN";
+-                        };
+-
+-                        HVINP_reg: HVINP {
+-                                /* 20v */
+-                                regulator-name = "HVINP";
+-                        };
+-
+-                        VCOM_reg: VCOM {
+-                                regulator-name = "VCOM";
+-                                /* Real max: -500000 */
+-                                regulator-max-microvolt = <4325000>;
+-                                /* Real min: -4325000 */
+-                                regulator-min-microvolt = <500000>;
+-                        };
+-
+-                        VNEG_reg: VNEG {
+-                                /* -15v */
+-                                regulator-name = "VNEG";
+-                        };
+-
+-                        VPOS_reg: VPOS {
+-                                /* 15v */
+-                                regulator-name = "VPOS";
+-                        };
+-
+-                        V3P3_reg: V3P3 {
+-                                regulator-name = "V3P3";
+-                        };
+-                };
+-        };
++	status = "disabled"; 
+ };
+ 
+ &ipu1_csi1_from_ipu1_csi1_mux {
+@@ -163,13 +47,16 @@
+ };
+ 
+ &mxcfb1 {
+-	status = "okay";
++	status = "disabled";
+ };
+ 
+ &mxcfb2 {
+-	status = "okay";
++	status = "disabled";
+ };
+ 
+-&pxp {
+-	status = "okay";
++&usbh1 {
++        pinctrl-names = "default";
++        pinctrl-0 = <&pinctrl_usbh1>;
++        status = "okay";
+ };
++
+diff --git a/arch/arm/boot/dts/imx6qdl-sabresd-advantech.dtsi b/arch/arm/boot/dts/imx6qdl-sabresd-advantech.dtsi
+new file mode 100644
+index 000000000000..8fd4cc49ee1b
+--- /dev/null
++++ b/arch/arm/boot/dts/imx6qdl-sabresd-advantech.dtsi
+@@ -0,0 +1,1110 @@
++// SPDX-License-Identifier: GPL-2.0+
++//
++// Copyright 2012 Freescale Semiconductor, Inc.
++// Copyright 2011 Linaro Ltd.
++
++#include <dt-bindings/clock/imx6qdl-clock.h>
++#include <dt-bindings/gpio/gpio.h>
++#include <dt-bindings/input/input.h>
++
++/ {
++	aliases {
++		mxcfb0 = &mxcfb1;
++		mxcfb1 = &mxcfb2;
++		mxcfb2 = &mxcfb3;
++		mxcfb3 = &mxcfb4;
++	};
++
++	hannstar_cabc {
++		compatible = "hannstar,cabc";
++		lvds0 {
++			gpios = <&gpio6 15 GPIO_ACTIVE_HIGH>;
++		};
++		lvds1 {
++			gpios = <&gpio6 16 GPIO_ACTIVE_HIGH>;
++		};
++	};
++
++	chosen {
++		stdout-path = &uart1;
++	};
++
++	memory: memory@10000000 {
++		reg = <0x10000000 0x40000000>;
++	};
++
++	regulators {
++		compatible = "simple-bus";
++		#address-cells = <1>;
++		#size-cells = <0>;
++
++		reg_usb_otg_vbus: regulator@0 {
++			compatible = "regulator-fixed";
++			reg = <0>;
++			regulator-name = "usb_otg_vbus";
++			regulator-min-microvolt = <5000000>;
++			regulator-max-microvolt = <5000000>;
++			gpio = <&gpio4 15 GPIO_ACTIVE_HIGH>;
++			enable-active-high;
++			vin-supply = <&swbst_reg>;
++		};
++
++		reg_audio: regulator@2 {
++			compatible = "regulator-fixed";
++			reg = <2>;
++			regulator-name = "wm8962-supply";
++			gpio = <&gpio4 10 0>;
++			enable-active-high;
++		};
++
++		reg_pcie: regulator@3 {
++			compatible = "regulator-fixed";
++			reg = <3>;
++			pinctrl-names = "default";
++			pinctrl-0 = <&pinctrl_pcie_reg>;
++			regulator-name = "MPCIE_3V3";
++			regulator-min-microvolt = <3300000>;
++			regulator-max-microvolt = <3300000>;
++			gpio = <&gpio3 19 0>;
++			enable-active-high;
++		};
++
++		reg_sensor: regulator@4 {
++			compatible = "regulator-fixed";
++			reg = <4>;
++			regulator-name = "sensor-supply";
++			regulator-min-microvolt = <3300000>;
++			regulator-max-microvolt = <3300000>;
++			gpio = <&gpio2 31 0>;
++			startup-delay-us = <500>;
++			enable-active-high;
++		};
++
++		reg_hdmi: regulator@5 {
++			compatible = "regulator-fixed";
++			reg = <5>;
++			regulator-name = "hdmi-5v-supply";
++			regulator-min-microvolt = <5000000>;
++			regulator-max-microvolt = <5000000>;
++			enable-active-high;
++			hdmi-5v-supply = <&swbst_reg>;
++		};
++
++		reg_mipi_dsi_pwr_on: mipi_dsi_pwr_on {
++			compatible = "regulator-fixed";
++			regulator-name = "mipi_dsi_pwr_on";
++			gpio = <&gpio6 14 0>;
++			enable-active-high;
++		};
++	};
++
++	sound {
++		compatible = "fsl,imx6q-sabresd-wm8962",
++			   "fsl,imx-audio-wm8962";
++		model = "wm8962-audio";
++		cpu-dai = <&ssi2>;
++		audio-codec = <&codec>;
++		asrc-controller = <&asrc>;
++		audio-routing =
++			"Headphone Jack", "HPOUTL",
++			"Headphone Jack", "HPOUTR",
++			"Ext Spk", "SPKOUTL",
++			"Ext Spk", "SPKOUTR",
++			"AMIC", "MICBIAS",
++			"IN3R", "AMIC",
++			"DMIC", "MICBIAS",
++			"DMICDAT", "DMIC",
++			"CPU-Playback", "ASRC-Playback",
++			"Playback", "CPU-Playback",
++			"ASRC-Capture", "CPU-Capture",
++			"CPU-Capture", "Capture";
++		mux-int-port = <2>;
++		mux-ext-port = <3>;
++		codec-master;
++		hp-det-gpios = <&gpio7 8 1>;
++		mic-det-gpios = <&gpio1 9 1>;
++		status = "disabled";
++	};
++
++	sound-hdmi {
++		compatible = "fsl,imx6q-audio-hdmi",
++			     "fsl,imx-audio-hdmi";
++		model = "imx-audio-hdmi";
++		hdmi-controller = <&hdmi_audio>;
++	};
++
++	mxcfb1: fb@0 {
++		compatible = "fsl,mxc_sdc_fb";
++		disp_dev = "ldb";
++		interface_pix_fmt = "RGB666";
++		default_bpp = <16>;
++		int_clk = <0>;
++		late_init = <0>;
++		status = "disabled";
++	};
++
++	mxcfb2: fb@1 {
++		compatible = "fsl,mxc_sdc_fb";
++		disp_dev = "hdmi";
++		interface_pix_fmt = "RGB24";
++		mode_str ="1920x1080M@60";
++		default_bpp = <24>;
++		int_clk = <0>;
++		late_init = <0>;
++		status = "disabled";
++	};
++
++	mxcfb3: fb@2 {
++		compatible = "fsl,mxc_sdc_fb";
++		disp_dev = "lcd";
++		interface_pix_fmt = "RGB565";
++		mode_str ="CLAA-WVGA";
++		default_bpp = <16>;
++		int_clk = <0>;
++		late_init = <0>;
++		status = "disabled";
++	};
++
++	mxcfb4: fb@3 {
++		compatible = "fsl,mxc_sdc_fb";
++		disp_dev = "ldb";
++		interface_pix_fmt = "RGB666";
++		default_bpp = <16>;
++		int_clk = <0>;
++		late_init = <0>;
++		status = "disabled";
++	};
++
++	lcd@0 {
++		compatible = "fsl,lcd";
++		ipu_id = <0>;
++		disp_id = <0>;
++		default_ifmt = "RGB565";
++		pinctrl-names = "default";
++		pinctrl-0 = <&pinctrl_ipu1>;
++		status = "okay";
++	};
++
++	backlight {
++		compatible = "pwm-backlight";
++		pwms = <&pwm1 0 5000000>;
++		brightness-levels = <0 4 8 16 32 64 128 255>;
++		default-brightness-level = <7>;
++		status = "okay";
++	};
++
++	leds {
++		compatible = "gpio-leds";
++		pinctrl-names = "default";
++		pinctrl-0 = <&pinctrl_gpio_leds>;
++	};
++
++	v4l2_cap_0 {
++		compatible = "fsl,imx6q-v4l2-capture";
++		ipu_id = <0>;
++		csi_id = <0>;
++		mclk_source = <0>;
++		status = "disabled";
++	};
++
++	v4l2_cap_1 {
++		compatible = "fsl,imx6q-v4l2-capture";
++		ipu_id = <0>;
++		csi_id = <1>;
++		mclk_source = <0>;
++		status = "disabled";
++	};
++
++	v4l2_out {
++		compatible = "fsl,mxc_v4l2_output";
++		status = "disabled";
++	};
++};
++
++&ipu1_csi0_from_ipu1_csi0_mux {
++	bus-width = <8>;
++	data-shift = <12>; /* Lines 19:12 used */
++	hsync-active = <1>;
++	vsync-active = <1>;
++};
++
++&ipu1_csi0_mux_from_parallel_sensor {
++	/* Downstream driver doesn't use endpoints */
++	/*
++	remote-endpoint = <&ov5642_to_ipu1_csi0_mux>;
++	 */
++};
++
++&ipu1_csi0 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_ipu1_csi0>;
++};
++
++&mipi_csi {
++	status = "okay";
++};
++
++&audmux {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_audmux>;
++	status = "disabled";
++};
++
++&clks {
++	assigned-clocks = <&clks IMX6QDL_CLK_LDB_DI0_SEL>,
++			  <&clks IMX6QDL_CLK_LDB_DI1_SEL>;
++	assigned-clock-parents = <&clks IMX6QDL_CLK_PLL2_PFD0_352M>,
++				 <&clks IMX6QDL_CLK_PLL2_PFD0_352M>;
++};
++
++&ecspi1 {
++	cs-gpios = <&gpio2 30 0 &gpio3 19 0>;
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_ecspi1>;
++	status = "okay";
++
++	flash: m25p80@0 {
++		#address-cells = <1>;
++		#size-cells = <1>;
++		compatible = "st,m25p32", "jedec,spi-nor";
++		spi-max-frequency = <20000000>;
++		reg = <0>;
++	};
++};
++
++&fec {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_enet>;
++	phy-mode = "rgmii";
++	fsl,magic-packet;
++	status = "okay";
++};
++
++&gpc {
++	fsl,ldo-bypass = <1>;
++};
++
++&dcic1 {
++	dcic_id = <0>;
++	dcic_mux = "dcic-hdmi";
++	status = "okay";
++};
++
++&dcic2 {
++	dcic_id = <1>;
++	dcic_mux = "dcic-lvds1";
++	status = "okay";
++};
++
++&hdmi_audio {
++	status = "okay";
++};
++
++&hdmi_cec {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_hdmi_cec>;
++	status = "okay";
++};
++
++&hdmi_core {
++	ipu_id = <0>;
++	disp_id = <0>;
++	status = "okay";
++};
++
++&hdmi_video {
++	fsl,phy_reg_vlev = <0x294>;
++	fsl,phy_reg_cksymtx = <0x800d>;
++	HDMI-supply = <&reg_hdmi>;
++	status = "okay";
++};
++
++&i2c1 {
++	clock-frequency = <100000>;
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_i2c1>;
++	status = "okay";
++
++        wdt@29 {
++                compatible = "fsl,adv-wdt-i2c";
++                pinctrl-names = "default";
++                pinctrl-0 = <&pinctrl_wdt_en_1 &pinctrl_wdt_ping_1>;
++                status = "okay";
++                wdt-en = <&gpio2 5 0>;
++                wdt-ping = <&gpio1 9 0>;
++                reg = <0x29>;
++        };
++
++	rx8010@32 {
++		compatible = "epson,rx8010";
++		reg = <0x32>;
++	};
++
++	ecc508a@60 {
++		compatible = "atmel,ecc508a";
++		reg = <0x60>;
++	};
++
++	codec: wm8962@1a {
++		compatible = "wlf,wm8962";
++		status = "disabled";
++		reg = <0x1a>;
++		clocks = <&clks IMX6QDL_CLK_CKO>;
++		DCVDD-supply = <&reg_audio>;
++		DBVDD-supply = <&reg_audio>;
++		AVDD-supply = <&reg_audio>;
++		CPVDD-supply = <&reg_audio>;
++		MICVDD-supply = <&reg_audio>;
++		PLLVDD-supply = <&reg_audio>;
++		SPKVDD1-supply = <&reg_audio>;
++		SPKVDD2-supply = <&reg_audio>;
++		gpio-cfg = <
++			0x0000 /* 0:Default */
++			0x0000 /* 1:Default */
++			0x0013 /* 2:FN_DMICCLK */
++			0x0000 /* 3:Default */
++			0x8014 /* 4:FN_DMICCDAT */
++			0x0000 /* 5:Default */
++		>;
++		amic-mono;
++	};
++
++	mma8451@1c {
++		compatible = "fsl,mma8451";
++		status = "disabled";
++		reg = <0x1c>;
++		position = <0>;
++		vdd-supply = <&reg_sensor>;
++		vddio-supply = <&reg_sensor>;
++		interrupt-parent = <&gpio1>;
++		interrupts = <18 8>;
++		interrupt-route = <1>;
++	};
++
++	ov564x: ov564x@3c {
++		compatible = "ovti,ov564x";
++		status = "disabled";
++		reg = <0x3c>;
++		pinctrl-names = "default";
++		pinctrl-0 = <&pinctrl_ipu1_2>;
++		clocks = <&clks IMX6QDL_CLK_CKO>;
++		clock-names = "csi_mclk";
++		DOVDD-supply = <&vgen4_reg>; /* 1.8v */
++		AVDD-supply = <&vgen3_reg>;  /* 2.8v, on rev C board is VGEN3, on rev B board is VGEN5 */
++		DVDD-supply = <&vgen2_reg>;  /* 1.5v*/
++		pwn-gpios = <&gpio1 16 1>;   /* active low: SD1_DAT0 */
++		rst-gpios = <&gpio1 17 0>;   /* active high: SD1_DAT1 */
++		csi_id = <0>;
++		mclk = <24000000>;
++		mclk_source = <0>;
++	};
++};
++
++&i2c2 {
++	clock-frequency = <100000>;
++	pinctrl-names = "default", "gpio";
++	pinctrl-0 = <&pinctrl_i2c2>;
++	pinctrl-1 = <&pinctrl_i2c2_gpio>;
++	scl-gpios = <&gpio4 12 GPIO_ACTIVE_HIGH>;
++	sda-gpios = <&gpio4 13 GPIO_ACTIVE_HIGH>;
++	status = "disabled";
++
++	egalax_ts@4 {
++		compatible = "eeti,egalax_ts";
++		reg = <0x4>;
++		pinctrl-names = "default";
++		pinctrl-0 = <&pinctrl_i2c2_egalax_int>;
++		interrupt-parent = <&gpio6>;
++		interrupts = <8 2>;
++		wakeup-gpios = <&gpio6 8 0>;
++	};
++
++	max11801@48 {
++		compatible = "maxim,max11801";
++		reg = <0x48>;
++		interrupt-parent = <&gpio3>;
++		interrupts = <26 2>;
++		work-mode = <1>;/*DCM mode*/
++		status = "disabled";
++	};
++
++	pmic: pfuze100@8 {
++		compatible = "fsl,pfuze100";
++		reg = <0x8>;
++		status = "disabled";
++
++		regulators {
++			sw1a_reg: sw1ab {
++				regulator-min-microvolt = <300000>;
++				regulator-max-microvolt = <1875000>;
++				regulator-boot-on;
++				regulator-always-on;
++				regulator-ramp-delay = <6250>;
++			};
++
++			sw1c_reg: sw1c {
++				regulator-min-microvolt = <300000>;
++				regulator-max-microvolt = <1875000>;
++				regulator-boot-on;
++				regulator-always-on;
++				regulator-ramp-delay = <6250>;
++			};
++
++			sw2_reg: sw2 {
++				regulator-min-microvolt = <800000>;
++				regulator-max-microvolt = <3300000>;
++				regulator-boot-on;
++				regulator-always-on;
++				regulator-ramp-delay = <6250>;
++			};
++
++			sw3a_reg: sw3a {
++				regulator-min-microvolt = <400000>;
++				regulator-max-microvolt = <1975000>;
++				regulator-boot-on;
++				regulator-always-on;
++			};
++
++			sw3b_reg: sw3b {
++				regulator-min-microvolt = <400000>;
++				regulator-max-microvolt = <1975000>;
++				regulator-boot-on;
++				regulator-always-on;
++			};
++
++			sw4_reg: sw4 {
++				regulator-min-microvolt = <800000>;
++				regulator-max-microvolt = <3300000>;
++				regulator-always-on;
++			};
++
++			swbst_reg: swbst {
++				regulator-min-microvolt = <5000000>;
++				regulator-max-microvolt = <5150000>;
++			};
++
++			snvs_reg: vsnvs {
++				regulator-min-microvolt = <1000000>;
++				regulator-max-microvolt = <3000000>;
++				regulator-boot-on;
++				regulator-always-on;
++			};
++
++			vref_reg: vrefddr {
++				regulator-boot-on;
++				regulator-always-on;
++			};
++
++			vgen1_reg: vgen1 {
++				regulator-min-microvolt = <800000>;
++				regulator-max-microvolt = <1550000>;
++			};
++
++			vgen2_reg: vgen2 {
++				regulator-min-microvolt = <800000>;
++				regulator-max-microvolt = <1550000>;
++			};
++
++			vgen3_reg: vgen3 {
++				regulator-min-microvolt = <1800000>;
++				regulator-max-microvolt = <3300000>;
++			};
++
++			vgen4_reg: vgen4 {
++				regulator-min-microvolt = <1800000>;
++				regulator-max-microvolt = <3300000>;
++				regulator-always-on;
++			};
++
++			vgen5_reg: vgen5 {
++				regulator-min-microvolt = <1800000>;
++				regulator-max-microvolt = <3300000>;
++				regulator-always-on;
++			};
++
++			vgen6_reg: vgen6 {
++				regulator-min-microvolt = <1800000>;
++				regulator-max-microvolt = <3300000>;
++				regulator-always-on;
++			};
++		};
++	};
++
++	hdmi_edid: edid@50 {
++		compatible = "fsl,imx6-hdmi-i2c";
++		reg = <0x50>;
++	};
++
++	ov564x_mipi: ov564x_mipi@3c { /* i2c2 driver */
++		compatible = "ovti,ov564x_mipi";
++		reg = <0x3c>;
++		clocks = <&clks 201>;
++		clock-names = "csi_mclk";
++		DOVDD-supply = <&vgen4_reg>; /* 1.8v */
++		AVDD-supply = <&vgen3_reg>;  /* 2.8v rev C board is VGEN3 rev B board is VGEN5 */
++		DVDD-supply = <&vgen2_reg>;  /* 1.5v*/
++		pwn-gpios = <&gpio1 19 1>;   /* active low: SD1_CLK */
++		rst-gpios = <&gpio1 20 0>;   /* active high: SD1_DAT2 */
++		csi_id = <1>;
++		mclk = <24000000>;
++		mclk_source = <0>;
++	};
++};
++
++&i2c3 {
++	clock-frequency = <100000>;
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_i2c3>;
++	status = "disabled";
++
++	egalax_ts@4 {
++		compatible = "eeti,egalax_ts";
++		reg = <0x4>;
++		pinctrl-names = "default";
++		pinctrl-0 = <&pinctrl_i2c3_egalax_int>;
++		interrupt-parent = <&gpio6>;
++		interrupts = <7 2>;
++		wakeup-gpios = <&gpio6 7 0>;
++	};
++
++	isl29023@44 {
++		compatible = "fsl,isl29023";
++		reg = <0x44>;
++		rext = <499>;
++		vdd-supply = <&reg_sensor>;
++		interrupt-parent = <&gpio3>;
++		interrupts = <9 2>;
++	};
++
++	mag3110@e {
++		compatible = "fsl,mag3110";
++		reg = <0xe>;
++		position = <2>;
++		vdd-supply = <&reg_sensor>;
++		vddio-supply = <&reg_sensor>;
++		interrupt-parent = <&gpio3>;
++		interrupts = <16 1>;
++	};
++};
++
++&iomuxc {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_hog>;
++
++	imx6qdl-sabresd {
++		pinctrl_hog: hoggrp {
++			fsl,pins = <
++				MX6QDL_PAD_GPIO_2__GPIO1_IO02		0x80000000	/* SD card - SD2_WP */
++				MX6QDL_PAD_GPIO_4__GPIO1_IO04		0x80000000	/* SD card - SD2_CD */
++				MX6QDL_PAD_EIM_D30__GPIO3_IO30		0x0001B0B0	/* BORAD_ID0 */
++				MX6QDL_PAD_EIM_D31__GPIO3_IO31		0x000130B0	/* BORAD_ID1 */
++				MX6QDL_PAD_CSI0_VSYNC__GPIO5_IO21	0x0001B0B0	/* WIFI_DET# */
++				MX6QDL_PAD_CSI0_DAT4__GPIO5_IO22	0x0001B0B0	/* 3G_DET# */
++				MX6QDL_PAD_CSI0_DAT5__GPIO5_IO23	0x0001B0B0	/* 3G_OFF# */
++				MX6QDL_PAD_NANDF_CS2__GPIO6_IO15	0x0001B0B0	/* PCIE_H_WLAN_LED# */
++				MX6QDL_PAD_NANDF_ALE__GPIO6_IO08	0x0001B0B0	/* PCIE_H_WWAN_LED# */
++				MX6QDL_PAD_NANDF_D0__GPIO2_IO00		0x0001B0B0	/* PCIE_F_WLAN_LED# */
++				MX6QDL_PAD_NANDF_D4__GPIO2_IO04		0x00017059	/* PCIE_F_WWAN_LED# */
++			>;
++		};
++
++		pinctrl_audmux: audmuxgrp {
++			fsl,pins = <
++				MX6QDL_PAD_CSI0_DAT7__AUD3_RXD		0x130b0
++				MX6QDL_PAD_CSI0_DAT4__AUD3_TXC		0x130b0
++				MX6QDL_PAD_CSI0_DAT5__AUD3_TXD		0x110b0
++				MX6QDL_PAD_CSI0_DAT6__AUD3_TXFS		0x130b0
++			>;
++		};
++
++		pinctrl_ecspi1: ecspi1grp {
++			fsl,pins = <
++				MX6QDL_PAD_EIM_D17__ECSPI1_MISO         0x100b1
++				MX6QDL_PAD_EIM_D18__ECSPI1_MOSI         0x100b1
++				MX6QDL_PAD_EIM_D16__ECSPI1_SCLK         0x100b1
++			>;
++		};
++
++		pinctrl_i2c2_egalax_int: egalax_i2c2_intgrp {
++			fsl,pins = <
++				MX6QDL_PAD_NANDF_ALE__GPIO6_IO08 0x80000000
++			>;
++		};
++
++		pinctrl_i2c3_egalax_int: egalax_i2c3_intgrp {
++			fsl,pins = <
++				MX6QDL_PAD_NANDF_CLE__GPIO6_IO07 0x80000000
++			>;
++		};
++
++		pinctrl_enet: enetgrp {
++			fsl,pins = <
++				MX6QDL_PAD_ENET_MDIO__ENET_MDIO		0x1b0b0
++				MX6QDL_PAD_ENET_MDC__ENET_MDC		0x1b0b0
++				MX6QDL_PAD_RGMII_TXC__RGMII_TXC		0x1b030
++				MX6QDL_PAD_RGMII_TD0__RGMII_TD0		0x1b030
++				MX6QDL_PAD_RGMII_TD1__RGMII_TD1		0x1b030
++				MX6QDL_PAD_RGMII_TD2__RGMII_TD2		0x1b030
++				MX6QDL_PAD_RGMII_TD3__RGMII_TD3		0x1b030
++				MX6QDL_PAD_RGMII_TX_CTL__RGMII_TX_CTL	0x1b030
++				MX6QDL_PAD_ENET_REF_CLK__ENET_TX_CLK	0x1b0b0
++				MX6QDL_PAD_RGMII_RXC__RGMII_RXC		0x1b030
++				MX6QDL_PAD_RGMII_RD0__RGMII_RD0		0x1b030
++				MX6QDL_PAD_RGMII_RD1__RGMII_RD1		0x1b030
++				MX6QDL_PAD_RGMII_RD2__RGMII_RD2		0x1b030
++				MX6QDL_PAD_RGMII_RD3__RGMII_RD3		0x1b030
++				MX6QDL_PAD_RGMII_RX_CTL__RGMII_RX_CTL	0x1b030
++				MX6QDL_PAD_GPIO_16__ENET_REF_CLK	0x4001b0a8
++			>;
++		};
++
++		pinctrl_enet_irq: enetirqgrp {
++			fsl,pins = <
++				MX6QDL_PAD_GPIO_6__ENET_IRQ		0x000b1
++			>;
++		};
++
++		pinctrl_hdmi_cec: hdmicecgrp {
++			fsl,pins = <
++				MX6QDL_PAD_KEY_ROW2__HDMI_TX_CEC_LINE 0x108b0
++			>;
++		};
++
++		pinctrl_hdmi_hdcp: hdmihdcpgrp {
++			fsl,pins = <
++				MX6QDL_PAD_KEY_COL3__HDMI_TX_DDC_SCL 0x4001b8b1
++				MX6QDL_PAD_KEY_ROW3__HDMI_TX_DDC_SDA 0x4001b8b1
++			>;
++		};
++
++		pinctrl_i2c1: i2c1grp {
++			fsl,pins = <
++				MX6QDL_PAD_CSI0_DAT8__I2C1_SDA		0x4001b8b1
++				MX6QDL_PAD_CSI0_DAT9__I2C1_SCL		0x4001b8b1
++			>;
++		};
++
++		pinctrl_i2c2: i2c2grp {
++			fsl,pins = <
++				MX6QDL_PAD_KEY_COL3__I2C2_SCL		0x4001b8b1
++				MX6QDL_PAD_KEY_ROW3__I2C2_SDA		0x4001b8b1
++			>;
++		};
++
++		pinctrl_i2c2_gpio: i2c2_gpio_grp {
++			fsl,pins = <
++				MX6QDL_PAD_KEY_COL3__GPIO4_IO12		0x1b0b0
++				MX6QDL_PAD_KEY_ROW3__GPIO4_IO13		0x1b0b0
++			>;
++		};
++
++		pinctrl_i2c3: i2c3grp {
++			fsl,pins = <
++				MX6QDL_PAD_GPIO_3__I2C3_SCL		0x4001b8b1
++				MX6QDL_PAD_GPIO_6__I2C3_SDA		0x4001b8b1
++			>;
++		};
++
++		pinctrl_ipu1: ipu1grp {
++			fsl,pins = <
++				MX6QDL_PAD_DI0_DISP_CLK__IPU1_DI0_DISP_CLK 0x10
++				MX6QDL_PAD_DI0_PIN15__IPU1_DI0_PIN15       0x10
++				MX6QDL_PAD_DI0_PIN2__IPU1_DI0_PIN02        0x10
++				MX6QDL_PAD_DI0_PIN3__IPU1_DI0_PIN03        0x10
++				MX6QDL_PAD_DI0_PIN4__IPU1_DI0_PIN04        0x80000000
++				MX6QDL_PAD_DISP0_DAT0__IPU1_DISP0_DATA00   0x10
++				MX6QDL_PAD_DISP0_DAT1__IPU1_DISP0_DATA01   0x10
++				MX6QDL_PAD_DISP0_DAT2__IPU1_DISP0_DATA02   0x10
++				MX6QDL_PAD_DISP0_DAT3__IPU1_DISP0_DATA03   0x10
++				MX6QDL_PAD_DISP0_DAT4__IPU1_DISP0_DATA04   0x10
++				MX6QDL_PAD_DISP0_DAT5__IPU1_DISP0_DATA05   0x10
++				MX6QDL_PAD_DISP0_DAT6__IPU1_DISP0_DATA06   0x10
++				MX6QDL_PAD_DISP0_DAT7__IPU1_DISP0_DATA07   0x10
++				MX6QDL_PAD_DISP0_DAT8__IPU1_DISP0_DATA08   0x10
++				MX6QDL_PAD_DISP0_DAT9__IPU1_DISP0_DATA09   0x10
++				MX6QDL_PAD_DISP0_DAT10__IPU1_DISP0_DATA10  0x10
++				MX6QDL_PAD_DISP0_DAT11__IPU1_DISP0_DATA11  0x10
++				MX6QDL_PAD_DISP0_DAT12__IPU1_DISP0_DATA12  0x10
++				MX6QDL_PAD_DISP0_DAT13__IPU1_DISP0_DATA13  0x10
++				MX6QDL_PAD_DISP0_DAT14__IPU1_DISP0_DATA14  0x10
++				MX6QDL_PAD_DISP0_DAT15__IPU1_DISP0_DATA15  0x10
++				MX6QDL_PAD_DISP0_DAT16__IPU1_DISP0_DATA16  0x10
++				MX6QDL_PAD_DISP0_DAT17__IPU1_DISP0_DATA17  0x10
++				MX6QDL_PAD_DISP0_DAT18__IPU1_DISP0_DATA18  0x10
++				MX6QDL_PAD_DISP0_DAT19__IPU1_DISP0_DATA19  0x10
++				MX6QDL_PAD_DISP0_DAT20__IPU1_DISP0_DATA20  0x10
++				MX6QDL_PAD_DISP0_DAT21__IPU1_DISP0_DATA21  0x10
++				MX6QDL_PAD_DISP0_DAT22__IPU1_DISP0_DATA22  0x10
++				MX6QDL_PAD_DISP0_DAT23__IPU1_DISP0_DATA23  0x10
++			>;
++		};
++
++		pinctrl_ipu1_2: ipu1grp-2 { /* parallel camera */
++			fsl,pins = <
++				MX6QDL_PAD_CSI0_DAT12__IPU1_CSI0_DATA12    0x80000000
++				MX6QDL_PAD_CSI0_DAT13__IPU1_CSI0_DATA13    0x80000000
++				MX6QDL_PAD_CSI0_DAT14__IPU1_CSI0_DATA14    0x80000000
++				MX6QDL_PAD_CSI0_DAT15__IPU1_CSI0_DATA15    0x80000000
++				MX6QDL_PAD_CSI0_DAT16__IPU1_CSI0_DATA16    0x80000000
++				MX6QDL_PAD_CSI0_DAT17__IPU1_CSI0_DATA17    0x80000000
++				MX6QDL_PAD_CSI0_DAT18__IPU1_CSI0_DATA18    0x80000000
++				MX6QDL_PAD_CSI0_DAT19__IPU1_CSI0_DATA19    0x80000000
++				MX6QDL_PAD_CSI0_DATA_EN__IPU1_CSI0_DATA_EN 0x80000000
++				MX6QDL_PAD_CSI0_PIXCLK__IPU1_CSI0_PIXCLK   0x80000000
++				MX6QDL_PAD_CSI0_MCLK__IPU1_CSI0_HSYNC      0x80000000
++				MX6QDL_PAD_CSI0_VSYNC__IPU1_CSI0_VSYNC     0x80000000
++				MX6QDL_PAD_SD1_DAT1__GPIO1_IO17            0x80000000
++				MX6QDL_PAD_SD1_DAT0__GPIO1_IO16            0x80000000
++			>;
++		};
++
++		pinctrl_ipu1_csi0: ipu1csi0grp {
++			fsl,pins = <
++				MX6QDL_PAD_CSI0_DAT12__IPU1_CSI0_DATA12    0x1b0b0
++				MX6QDL_PAD_CSI0_DAT13__IPU1_CSI0_DATA13    0x1b0b0
++				MX6QDL_PAD_CSI0_DAT14__IPU1_CSI0_DATA14    0x1b0b0
++				MX6QDL_PAD_CSI0_DAT15__IPU1_CSI0_DATA15    0x1b0b0
++				MX6QDL_PAD_CSI0_DAT16__IPU1_CSI0_DATA16    0x1b0b0
++				MX6QDL_PAD_CSI0_DAT17__IPU1_CSI0_DATA17    0x1b0b0
++				MX6QDL_PAD_CSI0_DAT18__IPU1_CSI0_DATA18    0x1b0b0
++				MX6QDL_PAD_CSI0_DAT19__IPU1_CSI0_DATA19    0x1b0b0
++				MX6QDL_PAD_CSI0_PIXCLK__IPU1_CSI0_PIXCLK   0x1b0b0
++				MX6QDL_PAD_CSI0_MCLK__IPU1_CSI0_HSYNC      0x1b0b0
++				MX6QDL_PAD_CSI0_VSYNC__IPU1_CSI0_VSYNC     0x1b0b0
++			>;
++		};
++
++		pinctrl_ov5640: ov5640grp {
++			fsl,pins = <
++				MX6QDL_PAD_SD1_DAT2__GPIO1_IO19 0x1b0b0
++				MX6QDL_PAD_SD1_CLK__GPIO1_IO20  0x1b0b0
++			>;
++		};
++
++		pinctrl_ov5642: ov5642grp {
++			fsl,pins = <
++				MX6QDL_PAD_SD1_DAT0__GPIO1_IO16 0x1b0b0
++				MX6QDL_PAD_SD1_DAT1__GPIO1_IO17 0x1b0b0
++			>;
++		};
++
++		pinctrl_pcie: pciegrp {
++			fsl,pins = <
++				MX6QDL_PAD_CSI0_PIXCLK__GPIO5_IO18	0x80000000	/* PCIE disable pin - WIFI_OFF# */
++				MX6QDL_PAD_EIM_CS0__GPIO2_IO23          0x80000000      /* PCIE reset pin */
++			>;
++		};
++
++		pinctrl_pcie_reg: pciereggrp {
++			fsl,pins = <
++				MX6QDL_PAD_EIM_D19__GPIO3_IO19	0x1b0b0
++			>;
++		};
++
++		pinctrl_pwm1: pwm1grp {
++			fsl,pins = <
++				MX6QDL_PAD_SD1_DAT3__PWM1_OUT		0x1b0b1
++			>;
++		};
++
++		pinctrl_uart1: uart1grp {
++			fsl,pins = <
++				MX6QDL_PAD_CSI0_DAT10__UART1_TX_DATA	0x1b0b1
++				MX6QDL_PAD_CSI0_DAT11__UART1_RX_DATA	0x1b0b1
++			>;
++		};
++
++		pinctrl_uart5_1: uart5grp-1 {
++			fsl,pins = <
++				MX6QDL_PAD_KEY_COL1__UART5_TX_DATA	0x1b0b1
++				MX6QDL_PAD_KEY_ROW1__UART5_RX_DATA	0x1b0b1
++				MX6QDL_PAD_KEY_COL4__UART5_RTS_B	0x1b0b1
++				MX6QDL_PAD_KEY_ROW4__UART5_CTS_B	0x1b0b1
++			>;
++		};
++
++		pinctrl_uart5dte_1: uart5dtegrp-1 {
++			fsl,pins = <
++				MX6QDL_PAD_KEY_ROW1__UART5_TX_DATA	0x1b0b1
++				MX6QDL_PAD_KEY_COL1__UART5_RX_DATA	0x1b0b1
++				MX6QDL_PAD_KEY_ROW4__UART5_RTS_B	0x1b0b1
++				MX6QDL_PAD_KEY_COL4__UART5_CTS_B	0x1b0b1
++			>;
++		};
++
++		pinctrl_usbotg: usbotggrp {
++			fsl,pins = <
++				MX6QDL_PAD_GPIO_1__USB_OTG_ID           0x17059
++				MX6QDL_PAD_KEY_ROW4__GPIO4_IO15		0x80000000	/* USB_OTG_PWR */
++				MX6QDL_PAD_KEY_COL4__GPIO4_IO14		0x0001B0B0	/* USB_OTG_OC */
++			>;
++		};
++
++
++
++		pinctrl_usdhc2: usdhc2grp {
++			fsl,pins = <
++				MX6QDL_PAD_SD2_CMD__SD2_CMD		0x17059
++				MX6QDL_PAD_SD2_CLK__SD2_CLK		0x10059
++				MX6QDL_PAD_SD2_DAT0__SD2_DATA0		0x17059
++				MX6QDL_PAD_SD2_DAT1__SD2_DATA1		0x17059
++				MX6QDL_PAD_SD2_DAT2__SD2_DATA2		0x17059
++				MX6QDL_PAD_SD2_DAT3__SD2_DATA3		0x17059
++			>;
++		};
++
++		pinctrl_usdhc3: usdhc3grp {
++			fsl,pins = <
++				MX6QDL_PAD_SD3_CMD__SD3_CMD		0x17059
++				MX6QDL_PAD_SD3_CLK__SD3_CLK		0x10059
++				MX6QDL_PAD_SD3_DAT0__SD3_DATA0		0x17059
++				MX6QDL_PAD_SD3_DAT1__SD3_DATA1		0x17059
++				MX6QDL_PAD_SD3_DAT2__SD3_DATA2		0x17059
++				MX6QDL_PAD_SD3_DAT3__SD3_DATA3		0x17059
++				MX6QDL_PAD_SD3_DAT4__SD3_DATA4		0x17059
++				MX6QDL_PAD_SD3_DAT5__SD3_DATA5		0x17059
++				MX6QDL_PAD_SD3_DAT6__SD3_DATA6		0x17059
++				MX6QDL_PAD_SD3_DAT7__SD3_DATA7		0x17059
++			>;
++		};
++
++		pinctrl_usdhc4: usdhc4grp {
++			fsl,pins = <
++				MX6QDL_PAD_SD4_CMD__SD4_CMD		0x17059
++				MX6QDL_PAD_SD4_CLK__SD4_CLK		0x10059
++				MX6QDL_PAD_SD4_DAT0__SD4_DATA0		0x17059
++				MX6QDL_PAD_SD4_DAT1__SD4_DATA1		0x17059
++				MX6QDL_PAD_SD4_DAT2__SD4_DATA2		0x17059
++				MX6QDL_PAD_SD4_DAT3__SD4_DATA3		0x17059
++				MX6QDL_PAD_SD4_DAT4__SD4_DATA4		0x17059
++				MX6QDL_PAD_SD4_DAT5__SD4_DATA5		0x17059
++				MX6QDL_PAD_SD4_DAT6__SD4_DATA6		0x17059
++				MX6QDL_PAD_SD4_DAT7__SD4_DATA7		0x17059
++			>;
++		};
++
++		pinctrl_wdog: wdoggrp {
++			fsl,pins = <
++				MX6QDL_PAD_GPIO_1__WDOG2_B 0x80000000
++			>;
++		};
++
++	        pinctrl_wdt_en_1: wdt_engrp-1 {
++	                fsl,pins = <
++	                        MX6QDL_PAD_NANDF_D5__GPIO2_IO05         0x80000000
++	                >;
++	        };
++	
++	        pinctrl_wdt_ping_1: wdt_pinggrp-1 {
++	                fsl,pins = <
++	                        MX6QDL_PAD_GPIO_9__GPIO1_IO09           0x80000000
++	                >;
++	        };
++
++	};
++
++	gpio_leds {
++		pinctrl_gpio_leds: gpioledsgrp {
++			fsl,pins = <
++				MX6QDL_PAD_GPIO_5__GPIO1_IO05 		0x80000000	/* gpio - com1_sel0 */
++				MX6QDL_PAD_GPIO_6__GPIO1_IO06 		0x80000000	/* gpio - com1_sel1 */
++				MX6QDL_PAD_GPIO_17__GPIO7_IO12		0x000130B0 	/* gpio - led */
++				MX6QDL_PAD_ENET_RXD0__GPIO1_IO27	0x80000000	/* DIO1(GPIO27) */
++				MX6QDL_PAD_ENET_TXD1__GPIO1_IO29	0x80000000      /* DIO2(GPIO29) */
++				MX6QDL_PAD_ENET_CRS_DV__GPIO1_IO25	0x80000000      /* DIO3(GPIO25) */
++				MX6QDL_PAD_ENET_TXD0__GPIO1_IO30	0x80000000      /* DIO4(GPIO30) */
++				MX6QDL_PAD_GPIO_19__GPIO4_IO05		0x80000000      /* DIO5(GPIO101) */
++				MX6QDL_PAD_GPIO_7__GPIO1_IO07		0x80000000      /* DIO6(GPIO7) */
++				MX6QDL_PAD_GPIO_8__GPIO1_IO08		0x80000000      /* DIO7(GPIO8) */
++				MX6QDL_PAD_GPIO_18__GPIO7_IO13		0x80000000      /* DIO8(GPIO205) */
++				MX6QDL_PAD_KEY_COL0__GPIO4_IO06		0x000130B0 	/* AI - MCU_INT */
++				MX6QDL_PAD_KEY_ROW0__GPIO4_IO07		0x000130B0	/* AI - COM_INT */
++			>;
++		};
++	};
++
++        usbh1 {
++                pinctrl_usbh1: usbh1_grp {
++                        fsl,pins = <
++                                MX6QDL_PAD_GPIO_0__GPIO1_IO00           0x00017099      /* USB_HOST_PWR_EN */
++                                MX6QDL_PAD_GPIO_3__GPIO1_IO03           0x0001B8B1      /* USB_HOST_OC# */
++                        >;
++                };
++        };
++
++};
++
++&ldb {
++	status = "okay";
++
++	lvds-channel@0 {
++		fsl,data-mapping = "spwg";
++		fsl,data-width = <18>;
++		status = "okay";
++
++		display-timings {
++			native-mode = <&timing0>;
++			timing0: hsd100pxn1 {
++				clock-frequency = <65000000>;
++				hactive = <1024>;
++				vactive = <768>;
++				hback-porch = <220>;
++				hfront-porch = <40>;
++				vback-porch = <21>;
++				vfront-porch = <7>;
++				hsync-len = <60>;
++				vsync-len = <10>;
++			};
++		};
++	};
++
++	lvds-channel@1 {
++		fsl,data-mapping = "spwg";
++		fsl,data-width = <18>;
++		primary;
++		status = "okay";
++
++		display-timings {
++			native-mode = <&timing1>;
++			timing1: hsd100pxn1 {
++				clock-frequency = <65000000>;
++				hactive = <1024>;
++				vactive = <768>;
++				hback-porch = <220>;
++				hfront-porch = <40>;
++				vback-porch = <21>;
++				vfront-porch = <7>;
++				hsync-len = <60>;
++				vsync-len = <10>;
++			};
++		};
++	};
++};
++
++&mipi_csi {
++	status = "okay";
++	ipu_id = <0>;
++	csi_id = <1>;
++	v_channel = <0>;
++	lanes = <2>;
++};
++
++&mipi_dsi {
++	dev_id = <0>;
++	disp_id = <1>;
++	lcd_panel = "TRULY-WVGA";
++	disp-power-on-supply = <&reg_mipi_dsi_pwr_on>;
++	reset-gpios = <&gpio6 11 GPIO_ACTIVE_LOW>;
++	reset-delay-us = <50>;
++	status = "okay";
++};
++
++&pcie {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_pcie>;
++	disable-gpio = <&gpio5 18 GPIO_ACTIVE_LOW>;
++	reset-gpio = <&gpio2 23 GPIO_ACTIVE_LOW>;
++	vpcie-supply = <&reg_pcie>;
++	status = "okay";
++};
++
++&pwm1 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_pwm1>;
++	status = "okay";
++};
++
++&reg_arm {
++       vin-supply = <&sw1a_reg>;
++};
++
++&reg_pu {
++       vin-supply = <&sw1c_reg>;
++};
++
++&reg_soc {
++       vin-supply = <&sw1c_reg>;
++};
++
++&snvs_poweroff {
++	status = "okay";
++};
++
++&ssi2 {
++	assigned-clocks = <&clks IMX6QDL_CLK_PLL4>,
++			  <&clks IMX6QDL_PLL4_BYPASS>,
++			  <&clks IMX6QDL_CLK_SSI2_SEL>;
++	assigned-clock-parents = <&clks IMX6QDL_CLK_OSC>,
++				 <&clks IMX6QDL_CLK_PLL4>,
++				 <&clks IMX6QDL_CLK_PLL4_AUDIO_DIV>;
++	assigned-clock-rates = <737280000>, <0>, <0>;
++	status = "disabled";
++};
++
++&uart1 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_uart1>;
++	status = "okay";
++};
++
++&usbotg {
++	vbus-supply = <&reg_usb_otg_vbus>;
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_usbotg>;
++	disable-over-current;
++	srp-disable;
++	hnp-disable;
++	adp-disable;
++	status = "okay";
++};
++
++&usbphy1 {
++	fsl,tx-d-cal = <106>;
++};
++
++&usbphy2 {
++	fsl,tx-d-cal = <0x5>;
++};
++
++&usdhc2 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_usdhc2>;
++	bus-width = <8>;
++	cd-gpios = <&gpio1 4 GPIO_ACTIVE_LOW>;
++	wp-gpios = <&gpio1 2 GPIO_ACTIVE_HIGH>;
++	no-1-8-v;
++	keep-power-in-suspend;
++	enable-sdio-wakeup;
++	status = "okay";
++};
++
++&usdhc3 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_usdhc3>;
++	bus-width = <8>;
++	cd-gpios = <&gpio2 0 GPIO_ACTIVE_LOW>;
++	wp-gpios = <&gpio2 1 GPIO_ACTIVE_HIGH>;
++	no-1-8-v;
++	keep-power-in-suspend;
++	enable-sdio-wakeup;
++	status = "okay";
++};
++
++&usdhc4 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_usdhc4>;
++	bus-width = <8>;
++	non-removable;
++	no-1-8-v;
++	auto-cmd23-broken;
++	keep-power-in-suspend;
++	status = "okay";
++};
++
++&wdog1 {
++	status = "disabled";
++};
++
++&wdog2 {
++	status = "disabled";
++};
+diff --git a/arch/arm/mach-imx/proc-board.c b/arch/arm/mach-imx/proc-board.c
+index 796f27c4e083..c08e4f0e9428 100644
+--- a/arch/arm/mach-imx/proc-board.c
++++ b/arch/arm/mach-imx/proc-board.c
+@@ -47,6 +47,7 @@ static int proc_board_probe(struct platform_device *pdev)
+ 	struct proc_board_data *board;
+ 	int ret = 0;
+ 
++	printk("%s, %d: \n", __FUNCTION__, __LINE__);
+ 	board = devm_kzalloc(&pdev->dev, sizeof(struct proc_board_data), GFP_KERNEL);
+ 	
+ 	if (!board) {
+@@ -77,12 +78,15 @@ static struct platform_driver proc_board_driver = {
+ 
+ static int __init proc_board_init(void)
+ {
++	printk("%s, %d: \n", __FUNCTION__, __LINE__);
+ 	return platform_driver_register(&proc_board_driver);
+ }
++
+ postcore_initcall(proc_board_init);
+ 
+ static void __exit proc_board_exit(void)
+ {
++	printk("%s, %d: \n", __FUNCTION__, __LINE__);
+ 	platform_driver_unregister(&proc_board_driver);
+ }
+ module_exit(proc_board_exit);
+diff --git a/drivers/pci/controller/dwc/pci-imx6.c b/drivers/pci/controller/dwc/pci-imx6.c
+index a39bdaaa3253..b8bc696cea16 100644
+--- a/drivers/pci/controller/dwc/pci-imx6.c
++++ b/drivers/pci/controller/dwc/pci-imx6.c
+@@ -1046,7 +1046,7 @@ static int imx_pcie_deassert_core_reset(struct imx_pcie *imx_pcie)
+ 	if (gpio_is_valid(imx_pcie->reset_gpio)) {
+ 		gpio_set_value_cansleep(imx_pcie->reset_gpio,
+ 					imx_pcie->gpio_active_high);
+-		mdelay(20);
++		mdelay(100);
+ 		gpio_set_value_cansleep(imx_pcie->reset_gpio,
+ 					!imx_pcie->gpio_active_high);
+ 		mdelay(20);
+diff --git a/drivers/watchdog/watchdog_advantech.c b/drivers/watchdog/watchdog_advantech.c
+index 6d5aa93cdf10..f7d78237d3c0 100755
+--- a/drivers/watchdog/watchdog_advantech.c
++++ b/drivers/watchdog/watchdog_advantech.c
+@@ -162,7 +162,7 @@ int adv_wdt_i2c_set_timeout(struct i2c_client *client, int val)
+ #else
+ 	int ret=-1; 
+ 	val = WDOG_SEC_TO_COUNT(val) & 0x0000FFFF;
+-	if((ret=i2c_smbus_write_word_data(client, (u8)REG_WDT_WATCHDOG_TIME_OUT, (u16)val)!=1)){
++	if((ret=i2c_smbus_write_word_data(client, (u8)REG_WDT_WATCHDOG_TIME_OUT, (u16)val))!=0){
+ 		printk("%s, %d: ERROR!! ret: %d\n", __FUNCTION__, __LINE__, ret);
+ 		//return -EIO;
+ 		return 0;
+@@ -382,7 +382,7 @@ static int adv_wdt_restart_handle(struct notifier_block *this, unsigned long mod
+ {
+ 	/* Ralph: The digits are swapped between the old and new MCU firmware version. */
+ 	if((adv_wdt_info.firmware_version==71)){
+-		dev_info(adv_wdt_miscdev.parent, "Ver 1.7: use old way to reboot\n", __FUNCTION__, __LINE__);
++		dev_info(adv_wdt_miscdev.parent, "%s, %d: Ver 1.7: use old way to reboot\n", __FUNCTION__, __LINE__);
+ 		if (test_and_set_bit(ADV_WDT_STATUS_OPEN, &adv_wdt.status)){
+ 			dev_crit(adv_wdt_miscdev.parent, "%s, %d: ERROR: ADV_WDT_STATUS_OPEN!!!!\n", __FUNCTION__, __LINE__);
+ 			return -EBUSY;
+@@ -395,7 +395,7 @@ static int adv_wdt_restart_handle(struct notifier_block *this, unsigned long mod
+ 		adv_wdt_ping();
+ 		mdelay(2000);
+ 	}else{
+-		dev_info(adv_wdt_miscdev.parent, "direct timeout\n", __FUNCTION__, __LINE__);
++		dev_info(adv_wdt_miscdev.parent, "%s, %d: direct timeout\n", __FUNCTION__, __LINE__);
+ 		i2c_smbus_write_word_data(adv_client, (u8)0x29, (u16)0x0001); 
+ 		mdelay(500);
+ 	}
+diff --git a/fs/proc/Makefile b/fs/proc/Makefile
+index ead487e80510..6a0f616070e7 100644
+--- a/fs/proc/Makefile
++++ b/fs/proc/Makefile
+@@ -27,6 +27,8 @@ proc-y	+= softirqs.o
+ proc-y	+= namespaces.o
+ proc-y	+= self.o
+ proc-y	+= thread_self.o
++#proc-$(CONFIG_ARCH_ADVANTECH)   += boardinfo.o advboot.o uboot.o
++proc-$(CONFIG_ARCH_ADVANTECH)   += boardinfo.o advboot.o uboot.o
+ proc-$(CONFIG_PROC_SYSCTL)	+= proc_sysctl.o
+ proc-$(CONFIG_NET)		+= proc_net.o
+ proc-$(CONFIG_PROC_KCORE)	+= kcore.o
+diff --git a/fs/proc/advboot.c b/fs/proc/advboot.c
+new file mode 100644
+index 000000000000..3a077e440971
+--- /dev/null
++++ b/fs/proc/advboot.c
+@@ -0,0 +1,53 @@
++#ifdef CONFIG_ARCH_ADVANTECH
++
++#include <linux/proc_fs.h>
++#include <linux/seq_file.h>
++
++char board_advboot_version[100];
++
++static int advboot_version_proc_show(struct seq_file *m, void *v)
++{
++        char uboot_temp_str[20] = "uboot_version=";
++        char advboot_temp_str[20] = "advboot_version=";
++        char *uboot_ver, *advboot_ver;
++        int uboot_len=0, total_len=0, advboot_len=0;
++
++        /* uboot */
++    uboot_ver = strstr(saved_command_line, uboot_temp_str);
++        uboot_len = strlen(uboot_ver);
++        uboot_ver = uboot_ver + strlen(uboot_temp_str);
++
++        /* advboot */
++    advboot_ver = strstr(saved_command_line, advboot_temp_str);
++        advboot_ver = advboot_ver + strlen(advboot_temp_str);
++        total_len = strlen(advboot_ver);
++        memset(board_advboot_version, 0x0, sizeof(board_advboot_version));
++        advboot_len = total_len - uboot_len - 1;
++        strncpy(board_advboot_version, advboot_ver, advboot_len);
++
++        seq_printf(m, "%s\n", board_advboot_version);
++
++        return 0;
++}
++
++static int advboot_version_proc_open(struct inode *inode, struct file *file)
++{
++        return single_open(file, advboot_version_proc_show, NULL);
++}
++
++static const struct file_operations advboot_version_proc_fops = {
++        .open           = advboot_version_proc_open,
++        .read           = seq_read,
++	.llseek         = seq_lseek,
++	.release        = single_release,
++};
++
++int __init proc_advboot_version_init(void)
++{
++	proc_create("advboot_version", 0, NULL, &advboot_version_proc_fops);
++	return 0;
++}
++
++fs_initcall(proc_advboot_version_init);
++
++#endif
+diff --git a/fs/proc/boardinfo.c b/fs/proc/boardinfo.c
+new file mode 100644
+index 000000000000..eb648f8b0ae7
+--- /dev/null
++++ b/fs/proc/boardinfo.c
+@@ -0,0 +1,34 @@
++#ifdef CONFIG_ARCH_ADVANTECH
++#include <linux/proc_fs.h>
++#include <linux/seq_file.h>
++
++extern char board_type[20];
++
++static int boardinfo_proc_show(struct seq_file *m, void *v)
++{
++        seq_printf(m, "%s", board_type);
++
++        return 0;
++}
++
++static int boardinfo_proc_open(struct inode *inode, struct file *file)
++{
++        return single_open(file, boardinfo_proc_show, NULL);
++}
++
++static const struct file_operations boardinfo_proc_fops = {
++        .open           = boardinfo_proc_open,
++        .read           = seq_read,
++        .llseek         = seq_lseek,
++        .release        = single_release,
++};
++
++int __init proc_boardinfo_init(void)
++{
++        proc_create("board", 0, NULL, &boardinfo_proc_fops);
++	return 0; 
++}
++
++fs_initcall(proc_boardinfo_init);
++
++#endif
+diff --git a/fs/proc/uboot.c b/fs/proc/uboot.c
+new file mode 100644
+index 000000000000..fbca976f452a
+--- /dev/null
++++ b/fs/proc/uboot.c
+@@ -0,0 +1,45 @@
++#ifdef CONFIG_ARCH_ADVANTECH
++
++#include <linux/proc_fs.h>
++#include <linux/seq_file.h>
++
++char board_uboot_version[100];
++
++static int uboot_version_proc_show(struct seq_file *m, void *v)
++{
++        char uboot_temp_str[20] = "uboot_version=";
++        char *uboot_ver;
++        int uboot_len=0;
++
++    uboot_ver = strstr(saved_command_line, uboot_temp_str);
++        uboot_len = strlen(uboot_ver);
++        uboot_ver = uboot_ver + strlen(uboot_temp_str);
++        memset(board_uboot_version, 0x0, sizeof(board_uboot_version));
++        strcpy(board_uboot_version, uboot_ver);
++
++        seq_printf(m, "%s\n", board_uboot_version);
++
++        return 0;
++}
++
++static int uboot_version_proc_open(struct inode *inode, struct file *file)
++{
++        return single_open(file, uboot_version_proc_show, NULL);
++}
++
++static const struct file_operations uboot_version_proc_fops = {
++        .open           = uboot_version_proc_open,
++        .read           = seq_read,
++        .llseek         = seq_lseek,
++        .release        = single_release,
++};
++
++int __init proc_uboot_version_init(void)
++{
++        proc_create("uboot_version", 0, NULL, &uboot_version_proc_fops);
++        return 0;
++}
++
++fs_initcall(proc_uboot_version_init);
++
++#endif

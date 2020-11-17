@@ -25,5 +25,9 @@ sdcardimage=core-image-full-cmdline
 
 CORE_IMAGE_EXTRA_INSTALL=" adv-base-files kernel-modules "
 EXTRA_IMAGE_FEATURES=" package-management "
+define extra_local_conf_append
+DISTRO_FEATURES_remove = " optee "
+endef 
+export extra_local_conf_append
 UBOOT_CONFIG = "1G"
 

@@ -22,6 +22,7 @@ endif
 	@echo "EXTRA_IMAGE_FEATURES += \"$(EXTRA_IMAGE_FEATURES)\"" >> $(yoctodir)/$(yoctobuilddir)/conf/extra-local.conf
 	@echo "UBOOT_CONFIG += \"$(UBOOT_CONFIG)\"" >> $(yoctodir)/$(yoctobuilddir)/conf/extra-local.conf
 	@echo "SCMVERSION = \"n\"" >> $(yoctodir)/$(yoctobuilddir)/conf/extra-local.conf
+	@echo "$${extra_local_conf_append}" >> $(yoctodir)/$(yoctobuilddir)/conf/extra-local.conf
 	@ln -sf $(currdir)/yocto.build.mk $(yoctodir)/$(yoctobuilddir)/Makefile
 	@touch $@
 

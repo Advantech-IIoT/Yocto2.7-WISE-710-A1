@@ -1,0 +1,27 @@
+From 1700d7d15c20ded412a4e0b04d4aed0334eb5b73 Mon Sep 17 00:00:00 2001
+From: Ralph Wang <ralph.wang@advantech.com.tw>
+Date: Tue, 17 Nov 2020 11:13:33 +0800
+Subject: [PATCH] enable fb in dts
+
+---
+ arch/arm/boot/dts/imx6dl-wise710-a1.dts | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/boot/dts/imx6dl-wise710-a1.dts b/arch/arm/boot/dts/imx6dl-wise710-a1.dts
+index 66a9af3233f5..98175b74c807 100644
+--- a/arch/arm/boot/dts/imx6dl-wise710-a1.dts
++++ b/arch/arm/boot/dts/imx6dl-wise710-a1.dts
+@@ -47,11 +47,11 @@
+ };
+ 
+ &mxcfb1 {
+-	status = "disabled";
++	status = "okay";
+ };
+ 
+ &mxcfb2 {
+-	status = "disabled";
++	status = "okay";
+ };
+ 
+ &usbh1 {

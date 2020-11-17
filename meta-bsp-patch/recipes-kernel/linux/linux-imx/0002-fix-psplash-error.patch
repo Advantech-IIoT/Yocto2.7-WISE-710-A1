@@ -1,0 +1,114 @@
+From 58cbb887813fa3dc7ff96fa313e357904cebf264 Mon Sep 17 00:00:00 2001
+From: Ralph Wang <ralph.wang@advantech.com.tw>
+Date: Tue, 17 Nov 2020 16:22:18 +0800
+Subject: [PATCH] fix psplash error
+
+---
+ arch/arm/boot/dts/imx6dl-wise710-a1.dts       |  2 +-
+ .../boot/dts/imx6qdl-sabresd-advantech.dtsi   | 64 ++++++++++---------
+ 2 files changed, 34 insertions(+), 32 deletions(-)
+
+diff --git a/arch/arm/boot/dts/imx6dl-wise710-a1.dts b/arch/arm/boot/dts/imx6dl-wise710-a1.dts
+index 98175b74c807..eb628401bad8 100644
+--- a/arch/arm/boot/dts/imx6dl-wise710-a1.dts
++++ b/arch/arm/boot/dts/imx6dl-wise710-a1.dts
+@@ -50,7 +50,7 @@
+ 	status = "okay";
+ };
+ 
+-&mxcfb2 {
++&mxcfb3 {
+ 	status = "okay";
+ };
+ 
+diff --git a/arch/arm/boot/dts/imx6qdl-sabresd-advantech.dtsi b/arch/arm/boot/dts/imx6qdl-sabresd-advantech.dtsi
+index 8fd4cc49ee1b..f7f581926f79 100644
+--- a/arch/arm/boot/dts/imx6qdl-sabresd-advantech.dtsi
++++ b/arch/arm/boot/dts/imx6qdl-sabresd-advantech.dtsi
+@@ -134,45 +134,47 @@
+ 	};
+ 
+ 	mxcfb1: fb@0 {
+-		compatible = "fsl,mxc_sdc_fb";
+-		disp_dev = "ldb";
+-		interface_pix_fmt = "RGB666";
+-		default_bpp = <16>;
+-		int_clk = <0>;
+-		late_init = <0>;
+-		status = "disabled";
++                compatible = "fsl,mxc_sdc_fb";
++                disp_dev = "hdmi";
++                interface_pix_fmt = "RGB24";
++                mode_str ="1920x1080M@60";
++                default_bpp = <16>;
++                int_clk = <0>;
++                late_init = <0>;
++                status = "disabled";
++
+ 	};
+ 
+ 	mxcfb2: fb@1 {
+-		compatible = "fsl,mxc_sdc_fb";
+-		disp_dev = "hdmi";
+-		interface_pix_fmt = "RGB24";
+-		mode_str ="1920x1080M@60";
+-		default_bpp = <24>;
+-		int_clk = <0>;
+-		late_init = <0>;
+-		status = "disabled";
++                compatible = "fsl,mxc_sdc_fb";
++                disp_dev = "lcd";
++                interface_pix_fmt = "RGB24";
++                mode_str ="1920x1080M@60";
++                default_bpp = <16>;
++                int_clk = <0>;
++                late_init = <0>;
++                status = "disabled";
++
+ 	};
+ 
+ 	mxcfb3: fb@2 {
+-		compatible = "fsl,mxc_sdc_fb";
+-		disp_dev = "lcd";
+-		interface_pix_fmt = "RGB565";
+-		mode_str ="CLAA-WVGA";
+-		default_bpp = <16>;
+-		int_clk = <0>;
+-		late_init = <0>;
+-		status = "disabled";
++                compatible = "fsl,mxc_sdc_fb";
++                disp_dev = "ldb";
++                interface_pix_fmt = "RGB24";
++                default_bpp = <16>;
++                int_clk = <0>;
++                late_init = <0>;
++                status = "disabled";
+ 	};
+ 
+ 	mxcfb4: fb@3 {
+-		compatible = "fsl,mxc_sdc_fb";
+-		disp_dev = "ldb";
+-		interface_pix_fmt = "RGB666";
+-		default_bpp = <16>;
+-		int_clk = <0>;
+-		late_init = <0>;
+-		status = "disabled";
++                compatible = "fsl,mxc_sdc_fb";
++                disp_dev = "ldb";
++                interface_pix_fmt = "RGB24";
++                default_bpp = <16>;
++                int_clk = <0>;
++                late_init = <0>;
++                status = "disabled";
+ 	};
+ 
+ 	lcd@0 {
+@@ -217,7 +219,7 @@
+ 
+ 	v4l2_out {
+ 		compatible = "fsl,mxc_v4l2_output";
+-		status = "disabled";
++		status = "okay";
+ 	};
+ };
+ 

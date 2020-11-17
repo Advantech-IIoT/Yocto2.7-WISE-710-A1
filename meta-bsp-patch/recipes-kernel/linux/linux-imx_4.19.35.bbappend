@@ -10,6 +10,7 @@ SRC_URI += "file://0001-add-imx6dl-wise710-a1.dts.patch"
 SRC_URI += "file://0002-fix-watchdog-restart-handler-fatlal-problem.patch"
 SRC_URI += "file://0001-update-for-device-tree-and-proc-board-data.patch"
 SRC_URI += "file://0001-enable-fb-in-dts.patch"
+SRC_URI += "file://0002-fix-psplash-error.patch"
 
 LOCALVERSION = ""
 

@@ -26,6 +26,7 @@ RDEPENDS_${PN} += " \
   e2fsprogs-resize2fs \
   i2c-tools \
   mtd-utils \
+  usbutils \
 "
 
 inherit useradd

@@ -1,0 +1,28 @@
+From b1d7b71f8dde4caf5d3703d23fa211b5f40b9a2a Mon Sep 17 00:00:00 2001
+From: Qing <cnj1990@sina.com.cn>
+Date: Fri, 25 Jun 2021 16:15:00 +0800
+Subject: [PATCH] add cp210x serial driver
+
+---
+ arch/arm/configs/imx_v7_defconfig | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/configs/imx_v7_defconfig b/arch/arm/configs/imx_v7_defconfig
+index 68aeb54548be..266cce4240a7 100644
+--- a/arch/arm/configs/imx_v7_defconfig
++++ b/arch/arm/configs/imx_v7_defconfig
+@@ -327,10 +327,12 @@ CONFIG_USB_STORAGE=y
+ CONFIG_USB_CHIPIDEA=y
+ CONFIG_USB_CHIPIDEA_UDC=y
+ CONFIG_USB_CHIPIDEA_HOST=y
+-CONFIG_USB_SERIAL=m
++CONFIG_USB_SERIAL=y
+ CONFIG_USB_SERIAL_GENERIC=y
++CONFIG_USB_SERIAL_CP210X=y 
+ CONFIG_USB_SERIAL_FTDI_SIO=m
+-CONFIG_USB_SERIAL_OPTION=m
++CONFIG_USB_SERIAL_WWAN=y
++CONFIG_USB_SERIAL_OPTION=y
+ CONFIG_USB_TEST=m
+ CONFIG_USB_EHSET_TEST_FIXTURE=y
+ CONFIG_NOP_USB_XCEIV=y

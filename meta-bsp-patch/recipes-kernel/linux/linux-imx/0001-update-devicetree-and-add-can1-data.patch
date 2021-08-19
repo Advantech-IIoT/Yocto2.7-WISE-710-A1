@@ -1,0 +1,44 @@
+From 6d91d4aa010218fbb5f86583d6450acd2cf97348 Mon Sep 17 00:00:00 2001
+From: Qing <cnj1990@sina.com.cn>
+Date: Mon, 7 Jun 2021 16:07:37 +0800
+Subject: [PATCH] update devicetree and add can1 data
+
+---
+ arch/arm/boot/dts/imx6dl-wise710-a1.dts          | 6 ++++++
+ arch/arm/boot/dts/imx6qdl-sabresd-advantech.dtsi | 9 +++++++++
+ 2 files changed, 15 insertions(+)
+
+diff --git a/arch/arm/boot/dts/imx6dl-wise710-a1.dts b/arch/arm/boot/dts/imx6dl-wise710-a1.dts
+index eb628401bad8..292a2e9ef73f 100644
+--- a/arch/arm/boot/dts/imx6dl-wise710-a1.dts
++++ b/arch/arm/boot/dts/imx6dl-wise710-a1.dts
+@@ -60,3 +60,9 @@
+         status = "okay";
+ };
+ 
++&can1 {
++        pinctrl-names = "default";
++        pinctrl-0 = <&pinctrl_flexcan1_1>;
++        status = "okay";
++};
++
+diff --git a/arch/arm/boot/dts/imx6qdl-sabresd-advantech.dtsi b/arch/arm/boot/dts/imx6qdl-sabresd-advantech.dtsi
+index f7f581926f79..6130f02951ba 100644
+--- a/arch/arm/boot/dts/imx6qdl-sabresd-advantech.dtsi
++++ b/arch/arm/boot/dts/imx6qdl-sabresd-advantech.dtsi
+@@ -934,6 +934,15 @@
+                 };
+         };
+ 
++       can1 {
++                pinctrl_flexcan1_1: flexcan1grp-1 {
++                        fsl,pins = <
++                                MX6QDL_PAD_KEY_ROW2__FLEXCAN1_RX 0x80000000
++                                MX6QDL_PAD_KEY_COL2__FLEXCAN1_TX 0x80000000
++                        >;
++                };
++       };
++
+ };
+ 
+ &ldb {

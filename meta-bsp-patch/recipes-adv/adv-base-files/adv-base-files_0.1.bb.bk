@@ -26,24 +26,9 @@ RDEPENDS_${PN} += " \
   e2fsprogs-resize2fs \
   i2c-tools \
   mtd-utils \
-  networkmanager \
   usbutils \
-  ntpdate \
-  ntp \
-  wpa-supplicant \
-  wpa-supplicant-passphrase \
-  gcc \
-  gcc-symlinks \
-  perl-module-extutils-cbuilder-platform-windows-gcc \
-  g++ \
-  g++-symlinks \
-  can-utils \
-  vim \
-  xserver-xorg-extension-viv-autohdmi \
-  binutils \
-  tzdata \
-  dosfstools \
 "
+
 inherit useradd
 
 USERADD_PACKAGES = "${PN}"

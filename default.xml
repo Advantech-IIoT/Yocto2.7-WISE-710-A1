@@ -3,7 +3,7 @@
 
   <default sync-j="2" clone-depth="1"/>
 
-  <remote fetch="https://github.com/advantechralph" name="advantechralph"/>
+  <remote fetch="git@github.com:Advantech-IIoT" name="Advantech-IIoT"/>
   <remote fetch="git://git.yoctoproject.org" name="yocto"/>
   <remote fetch="git://github.com/Freescale" name="community"/>
   <remote fetch="git://github.com/openembedded" name="oe"/>
@@ -12,19 +12,9 @@
   <remote fetch="git://github.com/TimesysGit"  name="Timesys"/>
   <remote fetch="git://github.com/meta-rust"  name="rust"/>
   <remote fetch="https://source.codeaurora.org/external/imx" name="CAF"/>
-<!--
-  <remote fetch="file:///disk/workssd/advantechralph/nxp/git/yocto" name="yocto"/>
-  <remote fetch="file:///disk/workssd/advantechralph/nxp/git/community" name="community"/>
-  <remote fetch="file:///disk/workssd/advantechralph/nxp/git/oe" name="oe"/>
-  <remote fetch="file:///disk/workssd/advantechralph/nxp/git/OSSystems" name="OSSystems"/>
-  <remote fetch="file:///disk/workssd/advantechralph/nxp/git/QT5" name="QT5"/>
-  <remote fetch="file:///disk/workssd/advantechralph/nxp/git/Timesys" name="Timesys"/>
-  <remote fetch="file:///disk/workssd/advantechralph/nxp/git/rust" name="rust"/>
-  <remote fetch="file:///disk/workssd/advantechralph/nxp/git/CAF" name="CAF"/>
--->
 
-  <project name="yocto" path="sources/meta-wise710a1-warrior" remote="advantechralph" revision="meta/wise710a1-warrior" clone-depth="1"/>
-  <project name="yocto" path="wise710a1-warrior" remote="advantechralph" revision="project/wise710a1-warrior" clone-depth="1">
+  <project name="yocto" path="sources/meta-wise710a1-warrior" remote="Advantech-IIoT" revision="meta/wise710a1-warrior" clone-depth="1"/>
+  <project name="yocto" path="wise710a1-warrior" remote="Advantech-IIoT" revision="project/wise710a1-warrior" clone-depth="1">
     <linkfile dest="fsl-setup-release.sh" src="fsl-setup-release.sh"/>
     <linkfile dest="setup-environment" src="setup-environment"/>
     <linkfile dest="create_build_wise710a1.sh" src="create_build_wise710a1.sh"/>

@@ -58,14 +58,14 @@ $ git config --global core.editor vim
 #### Clone source
 
 ```
-$ git clone -b project/wise710a1-warrior https://github.com/advantechralph/yocto.git
+$ git clone -b git@github.com:Advantech-IIoT/Yocto2.7-WISE-710-A1.git
 ```
 
 ### Set up Yocto's working directory (sstate-cache, tmp, and downloads).  
 
 ```
 $ cd yocto
-$ YOCTO_WORK_DIR=/root/imx-linux-warrior make prepare
+$ YOCTO_WORK_DIR=/opt/imx-linux-warrior make prepare
 ```
 
 ### Build NXP (Freescale) Yocto full command line image (core-image-full-cmdline)
@@ -88,7 +88,7 @@ You can also follow the steps as below.
 
 ```
 $ make info | grep core-image-full-cmdline
-core-image-full-cmdline       : /disk/workssd/advantechralph/workdir/warrior/tmp/deploy/images/imx6dlwise710a1/core-image-full-cmdline-imx6dlwise710a1-20200611073255.rootfs.sdcard
+core-image-full-cmdline       : /opt/imx-linux-out/tmp/deploy/images/imx6dlwise710a1/core-image-full-cmdline-imx6dlwise710a1-20210904045013.rootfs.sdcard
 ```
 
 2. Prepare micro SD card. 
@@ -112,7 +112,7 @@ After you get the image's path and SD card device name, you can use `dd` command
 
 ```
 # ex: 
-# ImagePath=/disk/workssd/advantechralph/workdir/warrior/tmp/deploy/images/imx6dlwise710a1/core-image-full-cmdline-imx6dlwise710a1-20200611073255.rootfs.sdcard
+# ImagePath=/opt/imx-linux-out/tmp/deploy/images/imx6dlwise710a1/core-image-full-cmdline-imx6dlwise710a1-20210904045013.rootfs.sdcard
 # SD_dev=/dev/sdc
 $ dd if=${ImagePath} of=${SD_dev} bs=1M status=progress conv=fsync
 $ sync
@@ -123,7 +123,7 @@ $ sync
 ```
 $ make info | grep core-image-full-cmdline
 $ lsblk -d
-$ dd if=/disk/workssd/advantechralph/workdir/warrior/tmp/deploy/images/imx6dlwise710a1/core-image-full-cmdline-imx6dlwise710a1-20200611073255.rootfs.sdcard of=/dev/sdc bs=1M status=progress conv=fsync
+$ dd if=/opt/imx-linux-out/tmp/deploy/images/imx6dlwise710a1/core-image-full-cmdline-imx6dlwise710a1-20210904045013.rootfs.sdcard of=/dev/sdc bs=1M status=progress conv=fsync
 $ sync
 ```
 
@@ -145,7 +145,7 @@ You can also follow the steps as below.
 
 ```
 $ make info | grep core-image-full-cmdline
-core-image-full-cmdline       : /disk/workssd/advantechralph/workdir/warrior/tmp/deploy/images/imx6dlwise710a1/core-image-full-cmdline-imx6dlwise710a1-20200611073255.rootfs.sdcard
+core-image-full-cmdline       : /opt/imx-linux-out/tmp/deploy/images/imx6dlwise710a1/core-image-full-cmdline-imx6dlwise710a1-20210904045013.rootfs.sdcard
 ```
 
 2. Chec device boot from SD card. 
@@ -186,7 +186,7 @@ $ ssh root@${WISE710A1_IP} umount /run/media/mmcblk0p?
 
 ```
 # ex: 
-# ImagePath=/disk/workssd/advantechralph/workdir/warrior/tmp/deploy/images/imx6dlwise710a1/core-image-full-cmdline-imx6dlwise710a1-20200611073255.rootfs.sdcard
+# ImagePath=/opt/imx-linux-out/tmp/deploy/images/imx6dlwise710a1/core-image-full-cmdline-imx6dlwise710a1-20210904045013.rootfs.sdcard
 # WISE710A1_IP= 172.17.8.183
 # Use scp to send image to eMMC 
 $ scp ${ImagePath} root@${WISE710A1_IP}:/dev/mmcblk0
@@ -197,7 +197,7 @@ $ ssh root@${WISE710A1_IP} sync
 
 ```
 # ex: 
-# ImagePath=/disk/workssd/advantechralph/workdir/warrior/tmp/deploy/images/imx6dlwise710a1/core-image-full-cmdline-imx6dlwise710a1-20200611073255.rootfs.sdcard
+# ImagePath=/opt/imx-linux-out/tmp/deploy/images/imx6dlwise710a1/core-image-full-cmdline-imx6dlwise710a1-20210904045013.rootfs.sdcard
 # WISE710A1_IP= 172.17.8.183
 $ ping ${WISE710A1_IP}
 $ scp ${ImagePath} root@${WISE710A1_IP}:/dev/mmcblk0
@@ -208,7 +208,7 @@ $ ssh root@${WISE710A1_IP} sync
 
 ## Build Package     
 
-- [Package Gitub Link](https://github.com/advantechralph/yocto/tree/project/wise710a1-warrior)
+- [Package Gitub Link](https://github.com/Advantech-IIoT/Yocto2.7-WISE-710-A1.git)
 
 - Package include: 
 
@@ -320,11 +320,11 @@ $ cd workspace/sources/u-boot-imx
 # Done some modification...
        
 $ cd -                         # back to build.imx6dlwise710a1
-$ bitbake u-boot-imx           # test build for modification
+$ bitbake linux-imx           # test build for modification
 
 ```
 
-2. After modify source in `u-boot-imx`, run git add and commit for branch `devtool`. 
+2. After modify source in `linux-imx`, run git add and commit for branch `devtool`. 
 
 ```
 $ git add .
@@ -335,7 +335,8 @@ $ git commit . -m "add some comment here..."
      
 ```
 $ bitbake-layers create-layer --priority 15 meta-test
-$ devtool update-recipe -a meta-test u-boot-imx      # all patches will be located in meta-test
+$ devtool update-recipe -a meta-test linux-imx      # all patches will be located in meta-test
+$ cp meta-test/recipes-kernel/linux/linux-imx/*.patch build/yocto/sources/meta-wise710a1-warrior/meta-bsp-patch/recipes-kernel/linux/linux-imx/
 ```
 
 

@@ -14,6 +14,7 @@ SRC_URI += "file://0001-enable-fb-in-dts.patch"
 SRC_URI += "file://0001-add-cp210x-serial-driver.patch"
 SRC_URI += "file://0002-fix-psplash-error.patch"
 SRC_URI += "file://0002-update-rtc-rx8010.patch"
+SRC_URI += "file://0001-update-fm25-eeprom-supported.patch"
 
 LOCALVERSION = ""
 

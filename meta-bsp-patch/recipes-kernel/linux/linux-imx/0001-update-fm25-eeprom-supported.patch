@@ -1,0 +1,797 @@
+From d288a58c71e889c41fb7a9e2b903293318ba5248 Mon Sep 17 00:00:00 2001
+From: james0718 <yaok0710@163.com>
+Date: Mon, 6 Sep 2021 11:03:21 +0800
+Subject: [PATCH] update fm25 eeprom supported
+
+---
+ .../boot/dts/imx6qdl-sabresd-advantech.dtsi   |   6 +
+ arch/arm/configs/imx_v7_defconfig             |   1 +
+ drivers/misc/eeprom/Kconfig                   |  11 +
+ drivers/misc/eeprom/Makefile                  |   1 +
+ drivers/misc/eeprom/fm25.c                    | 717 ++++++++++++++++++
+ 5 files changed, 736 insertions(+)
+ create mode 100644 drivers/misc/eeprom/fm25.c
+
+diff --git a/arch/arm/boot/dts/imx6qdl-sabresd-advantech.dtsi b/arch/arm/boot/dts/imx6qdl-sabresd-advantech.dtsi
+index 6130f02951ba..b252423caf26 100644
+--- a/arch/arm/boot/dts/imx6qdl-sabresd-advantech.dtsi
++++ b/arch/arm/boot/dts/imx6qdl-sabresd-advantech.dtsi
+@@ -272,6 +272,12 @@
+ 		spi-max-frequency = <20000000>;
+ 		reg = <0>;
+ 	};
++	chip2: fm25@1 {
++		/*compatible = "ramtron,fm25v10";*/
++		compatible = "cypress,fm25";
++		spi-max-frequency = <40000000>;
++		reg = <1>;
++	};
+ };
+ 
+ &fec {
+diff --git a/arch/arm/configs/imx_v7_defconfig b/arch/arm/configs/imx_v7_defconfig
+index 266cce4240a7..96730e335aeb 100644
+--- a/arch/arm/configs/imx_v7_defconfig
++++ b/arch/arm/configs/imx_v7_defconfig
+@@ -122,6 +122,7 @@ CONFIG_SENSORS_FXOS8700=y
+ CONFIG_SENSORS_FXAS2100X=y
+ CONFIG_EEPROM_AT24=y
+ CONFIG_EEPROM_AT25=y
++CONFIG_FRAM_FM25=y
+ # CONFIG_SCSI_PROC_FS is not set
+ CONFIG_BLK_DEV_SD=y
+ CONFIG_SCSI_CONSTANTS=y
+diff --git a/drivers/misc/eeprom/Kconfig b/drivers/misc/eeprom/Kconfig
+index d382b13c27dd..d8582d497a1d 100644
+--- a/drivers/misc/eeprom/Kconfig
++++ b/drivers/misc/eeprom/Kconfig
+@@ -41,6 +41,17 @@ config EEPROM_AT25
+ 	  This driver can also be built as a module.  If so, the module
+ 	  will be called at25.
+ 
++config FRAM_FM25
++        tristate "SPI Cypress FRAM"
++        depends on SPI && SYSFS
++        help
++          Enable this driver to get read/write support to SPI FRAMs,
++          after you configure the board init code to know about each fram
++          on your target board.
++
++          This driver can also be built as a module.  If so, the module
++          will be called fm25.
++
+ config EEPROM_LEGACY
+ 	tristate "Old I2C EEPROM reader"
+ 	depends on I2C && SYSFS
+diff --git a/drivers/misc/eeprom/Makefile b/drivers/misc/eeprom/Makefile
+index 2aab60ef3e3e..87b4ea70f796 100644
+--- a/drivers/misc/eeprom/Makefile
++++ b/drivers/misc/eeprom/Makefile
+@@ -7,3 +7,4 @@ obj-$(CONFIG_EEPROM_93CX6)	+= eeprom_93cx6.o
+ obj-$(CONFIG_EEPROM_93XX46)	+= eeprom_93xx46.o
+ obj-$(CONFIG_EEPROM_DIGSY_MTC_CFG) += digsy_mtc_eeprom.o
+ obj-$(CONFIG_EEPROM_IDT_89HPESX) += idt_89hpesx.o
++obj-$(CONFIG_FRAM_FM25)         += fm25.o
+diff --git a/drivers/misc/eeprom/fm25.c b/drivers/misc/eeprom/fm25.c
+new file mode 100644
+index 000000000000..9c175ab2dca6
+--- /dev/null
++++ b/drivers/misc/eeprom/fm25.c
+@@ -0,0 +1,717 @@
++#include <linux/version.h>
++#ifndef KERNEL_VERSION
++#define KERNEL_VERSION(a, b, c) KERNEL_VERSION((a)*65536+(b)*256+(c))
++#endif
++
++
++#include <linux/kernel.h>
++#include <linux/module.h>
++#include <linux/slab.h>
++#include <linux/delay.h>
++#include <linux/device.h>
++#include <linux/sched.h>
++
++#include <linux/nvmem-provider.h>
++#include <linux/spi/spi.h>
++#include <linux/spi/eeprom.h>
++#include <linux/property.h>
++
++#include <linux/of.h>
++#include <linux/uaccess.h>
++
++struct fm25_data {
++	struct spi_device	*spi;
++	struct mutex		lock;
++	struct spi_eeprom	chip;
++	unsigned		addrlen;
++	struct nvmem_config	nvmem_config;
++	struct nvmem_device	*nvmem;
++	int	has_sernum;
++};
++struct fm25_data *global_fm25 = NULL;
++ssize_t major = 0;
++static struct class *eeprom_class = NULL;
++
++#define	FM25_WREN	0x06		/* latch the write enable */
++#define	FM25_WRDI	0x04		/* reset the write enable */
++#define	FM25_RDSR	0x05		/* read status register */
++#define	FM25_WRSR	0x01		/* write status register */
++#define	FM25_READ	0x03		/* read byte(s) */
++#define	FM25_WRITE	0x02		/* write byte(s)/sector */
++#define	FM25_SLEEP	0xb9		/* enter sleep mode */
++#define	FM25_RDID	0x9f		/* read device ID */
++#define	FM25_RDSN	0xc3		/* read S/N */
++
++#define	FM25_SR_nRDY	0x01		/* nRDY = write-in-progress */
++#define	FM25_SR_WEN	0x02		/* write enable (latched) */
++#define	FM25_SR_BP0	0x04		/* BP for software writeprotect */
++#define	FM25_SR_BP1	0x08
++#define	FM25_SR_WPEN	0x80		/* writeprotect enable */
++
++#define	FM25_INSTR_BIT3	0x08		/* Additional address bit in instr */
++#define	FM25_ID_LEN	9		/* ID lenght */
++#define	FM25_SN_LEN	8		/* serial number lenght */
++
++#define	FM25_MAXADDRLEN	3		/* 24 bit addresses */
++
++/* Specs often allow 5 msec for a page write, sometimes 20 msec;
++ * it's important to recover from write timeouts.
++ */
++#define	EE_TIMEOUT	25
++
++/*-------------------------------------------------------------------------*/
++
++#define	io_limit	PAGE_SIZE	/* bytes */
++
++#define FM25_PAGE_SIZE 16	/* bytes */
++#define ADVANTECH_FM25_EEPROM_VER           "2.00"
++#define ADVANTECH_FM25_EEPROM_DATE          "08/27/2021"
++
++static int fm25_ee_read(void *priv, unsigned int offset,
++			void *val, size_t count)
++{
++	struct fm25_data *fm25 = priv;
++	char *buf = val;
++	u8			command[FM25_MAXADDRLEN + 1];
++	u8			*cp;
++	ssize_t			status;
++	struct spi_transfer	t[2];
++	struct spi_message	m;
++	u8			instr;
++
++	if (unlikely(offset >= fm25->chip.byte_len))
++		return -EINVAL;
++	if ((offset + count) > fm25->chip.byte_len)
++		count = fm25->chip.byte_len - offset;
++	if (unlikely(!count))
++		return -EINVAL;
++
++	cp = command;
++
++	instr = FM25_READ;
++	if (fm25->chip.flags & EE_INSTR_BIT3_IS_ADDR)
++		if (offset >= (1U << (fm25->addrlen * 8)))
++			instr |= FM25_INSTR_BIT3;
++	*cp++ = instr;
++
++	/* 8/16/24-bit address is written MSB first */
++	switch (fm25->addrlen) {
++	default:	/* case 3 */
++		*cp++ = offset >> 16;
++		/* fall through */
++	case 2:
++		*cp++ = offset >> 8;
++		/* fall through */
++	case 1:
++	case 0:	/* can't happen: for better codegen */
++		*cp++ = offset >> 0;
++	}
++
++	spi_message_init(&m);
++	memset(t, 0, sizeof(t));
++
++	t[0].tx_buf = command;
++	t[0].len = fm25->addrlen + 1;
++	spi_message_add_tail(&t[0], &m);
++
++	t[1].rx_buf = buf;
++	t[1].len = count;
++	spi_message_add_tail(&t[1], &m);
++
++	mutex_lock(&fm25->lock);
++
++	/* Read it all at once.
++	 *
++	 * REVISIT that's potentially a problem with large chips, if
++	 * other devices on the bus need to be accessed regularly or
++	 * this chip is clocked very slowly
++	 */
++	status = spi_sync(fm25->spi, &m);
++	dev_dbg(&fm25->spi->dev, "read %zu bytes at %d --> %zd\n",
++		count, offset, status);
++
++	mutex_unlock(&fm25->lock);
++	return status;
++}
++
++static int fm25_ee_write(void *priv, unsigned int off, void *val, size_t count)
++{
++	struct fm25_data *fm25 = priv;
++	const char *buf = val;
++	int			status = 0;
++	unsigned		buf_size;
++	u8			*bounce;
++
++	if (unlikely(off >= fm25->chip.byte_len))
++		return -EFBIG;
++	if ((off + count) > fm25->chip.byte_len)
++		count = fm25->chip.byte_len - off;
++	if (unlikely(!count))
++		return -EINVAL;
++
++	/* Temp buffer starts with command and address */
++	buf_size = fm25->chip.page_size;
++	if (buf_size > io_limit)
++		buf_size = io_limit;
++	bounce = kmalloc(buf_size + fm25->addrlen + 1, GFP_KERNEL);
++	if (!bounce)
++		return -ENOMEM;
++
++	/* For write, rollover is within the page ... so we write at
++	 * most one page, then manually roll over to the next page.
++	 */
++	mutex_lock(&fm25->lock);
++	do {
++		unsigned long	timeout, retries;
++		unsigned	segment;
++		unsigned	offset = (unsigned) off;
++		u8		*cp = bounce;
++		int		sr;
++		u8		instr;
++
++		*cp = FM25_WREN;
++		status = spi_write(fm25->spi, cp, 1);
++		if (status < 0) {
++			dev_dbg(&fm25->spi->dev, "WREN --> %d\n", status);
++			break;
++		}
++
++		instr = FM25_WRITE;
++		if (fm25->chip.flags & EE_INSTR_BIT3_IS_ADDR)
++			if (offset >= (1U << (fm25->addrlen * 8)))
++				instr |= FM25_INSTR_BIT3;
++		*cp++ = instr;
++
++		/* 8/16/24-bit address is written MSB first */
++		switch (fm25->addrlen) {
++		default:	/* case 3 */
++			*cp++ = offset >> 16;
++			/* fall through */
++		case 2:
++			*cp++ = offset >> 8;
++			/* fall through */
++		case 1:
++		case 0:	/* can't happen: for better codegen */
++			*cp++ = offset >> 0;
++		}
++
++		/* Write as much of a page as we can */
++		segment = buf_size - (offset % buf_size);
++		if (segment > count)
++			segment = count;
++		memcpy(cp, buf, segment);
++		status = spi_write(fm25->spi, bounce,
++				segment + fm25->addrlen + 1);
++		dev_dbg(&fm25->spi->dev, "write %u bytes at %u --> %d\n",
++			segment, offset, status);
++		if (status < 0)
++			break;
++
++		/* REVISIT this should detect (or prevent) failed writes
++		 * to readonly sections of the EEPROM...
++		 */
++
++		/* Wait for non-busy status */
++		timeout = jiffies + msecs_to_jiffies(EE_TIMEOUT);
++		retries = 0;
++		do {
++
++			sr = spi_w8r8(fm25->spi, FM25_RDSR);
++			if (sr < 0 || (sr & FM25_SR_nRDY)) {
++				dev_dbg(&fm25->spi->dev,
++					"rdsr --> %d (%02x)\n", sr, sr);
++				/* at HZ=100, this is sloooow */
++				msleep(1);
++				continue;
++			}
++			if (!(sr & FM25_SR_nRDY))
++				break;
++		} while (retries++ < 3 || time_before_eq(jiffies, timeout));
++
++		if ((sr < 0) || (sr & FM25_SR_nRDY)) {
++			dev_err(&fm25->spi->dev,
++				"write %u bytes offset %u, timeout after %u msecs\n",
++				segment, offset,
++				jiffies_to_msecs(jiffies -
++					(timeout - EE_TIMEOUT)));
++			status = -ETIMEDOUT;
++			break;
++		}
++
++		off += segment;
++		buf += segment;
++		count -= segment;
++
++	} while (count > 0);
++
++	mutex_unlock(&fm25->lock);
++
++	kfree(bounce);
++	return status;
++}
++
++static ssize_t
++fm25_data_read(
++	struct fm25_data *fm25,
++	char *buf,
++	unsigned offset,
++	size_t count
++)
++{
++	int status = fm25_ee_read(fm25, offset, buf, count);
++	return status == 0 ? count : 0;
++}
++
++static ssize_t
++fm25_data_write(struct fm25_data *fm25, const char *buf, loff_t off,
++	      size_t count)
++{
++	int status = fm25_ee_write(fm25, off, buf, count);
++	return status == 0 ? count : 0;
++}
++
++static ssize_t
++fm25_id_read(struct fm25_data *fm25, char *buf)
++{
++	u8 command[1] = {FM25_RDID};
++	ssize_t	status;
++	struct spi_transfer	t[2];
++	struct spi_message	m;
++
++	spi_message_init(&m);
++	memset(t, 0, sizeof t);
++
++	t[0].tx_buf = command;
++	t[0].len = 1;
++	spi_message_add_tail(&t[0], &m);
++
++	t[1].rx_buf = buf;
++	t[1].len = FM25_ID_LEN;
++	spi_message_add_tail(&t[1], &m);
++
++	mutex_lock(&fm25->lock);
++
++	status = spi_sync(fm25->spi, &m);
++	dev_dbg(&fm25->spi->dev,
++		"read %zu bytes of ID --> %d\n",
++	 FM25_ID_LEN, (int) status);
++
++	mutex_unlock(&fm25->lock);
++	return status ? status : FM25_ID_LEN;
++}
++
++/*-------------------------------------------------------------------------*/
++
++static int fm25_np_to_chip(struct device *dev,
++			   struct device_node *np,
++			   struct spi_eeprom *chip)
++{
++	memset(chip, 0, sizeof(*chip));
++	strncpy(chip->name, np->name, sizeof(chip->name));
++
++	if (of_find_property(np, "read-only", NULL))
++		chip->flags |= EE_READONLY;
++
++	return 0;
++}
++
++static int fm25_probe(struct spi_device *spi)
++{
++	struct fm25_data	*fm25 = NULL;
++	struct spi_eeprom	chip;
++	struct device_node	*np = spi->dev.of_node;
++	char id[FM25_ID_LEN] = {0};
++	int			err;
++//	int			sr;
++//	int			addrlen;
++
++	/* Chip description */
++	if (!spi->dev.platform_data) {
++		if (np) {
++			err = fm25_np_to_chip(&spi->dev, np, &chip);
++			if (err)
++				return err;
++		} else {
++			dev_err(&spi->dev, "Error: no chip description\n");
++			return -ENODEV;
++		}
++	} else
++		chip = *(struct spi_eeprom *)spi->dev.platform_data;
++
++#if 0
++	/* For now we only support 8/16/24 bit addressing */
++	if (chip.flags & EE_ADDR1)
++		addrlen = 1;
++	else if (chip.flags & EE_ADDR2)
++		addrlen = 2;
++	else if (chip.flags & EE_ADDR3)
++		addrlen = 3;
++	else {
++		dev_dbg(&spi->dev, "unsupported address type\n");
++		return -EINVAL;
++	}
++
++	/* Ping the chip ... the status register is pretty portable,
++	 * unlike probing manufacturer IDs.  We do expect that system
++	 * firmware didn't write it in the past few milliseconds!
++	 */
++	sr = spi_w8r8(spi, FM25_RDSR);
++	if (sr < 0 || sr & FM25_SR_nRDY) {
++		dev_dbg(&spi->dev, "rdsr --> %d (%02x)\n", sr, sr);
++		return -ENXIO;
++	}
++#endif
++
++	fm25 = devm_kzalloc(&spi->dev, sizeof(struct fm25_data), GFP_KERNEL);
++	if (!fm25)
++		return -ENOMEM;
++
++	mutex_init(&fm25->lock);
++	fm25->chip = chip;
++	fm25->spi = spi;
++	spi_set_drvdata(spi, fm25);
++
++	/* Get ID of chip */
++	fm25_id_read(fm25, id);
++	if (id[6] != 0xc2) {
++		dev_err(&spi->dev, "Error: no Cypress FRAM (id %02x)\n", id[6]);
++		return -ENODEV;
++	}
++
++	/* set size found in ID */
++	switch (id[7]) {
++	case 0x21:
++		fm25->chip.byte_len = 16 * 1024;
++		break;
++	case 0x22:
++		fm25->chip.byte_len = 32 * 1024;
++		break;
++	case 0x23:
++		fm25->chip.byte_len = 64 * 1024;
++		break;
++	case 0x24:
++		fm25->chip.byte_len = 128 * 1024;
++		break;
++	case 0x25:
++		fm25->chip.byte_len = 256 * 1024;
++		break;
++	default:
++		dev_err(&spi->dev, "Error: unsupported size (id %02x)\n", id[7]);
++		return -ENODEV;
++		break;
++	}
++
++	if (fm25->chip.byte_len > 64 * 1024) {
++		fm25->addrlen = 3;
++		fm25->chip.flags |= EE_ADDR3;
++	}
++	else {
++		fm25->addrlen = 2;
++		fm25->chip.flags |= EE_ADDR2;
++	}
++
++	if (id[8])
++		fm25->has_sernum = 1;
++	else
++		fm25->has_sernum = 0;
++
++	fm25->chip.page_size = PAGE_SIZE;
++
++	fm25->nvmem_config.name = dev_name(&spi->dev);
++	fm25->nvmem_config.dev = &spi->dev;
++	fm25->nvmem_config.read_only = chip.flags & EE_READONLY;
++	fm25->nvmem_config.root_only = true;
++	fm25->nvmem_config.owner = THIS_MODULE;
++	fm25->nvmem_config.compat = true;
++	fm25->nvmem_config.base_dev = &spi->dev;
++	fm25->nvmem_config.reg_read = fm25_ee_read;
++	fm25->nvmem_config.reg_write = fm25_ee_write;
++	fm25->nvmem_config.priv = fm25;
++	fm25->nvmem_config.stride = 1;
++	fm25->nvmem_config.word_size = 1;
++	fm25->nvmem_config.size = chip.byte_len;
++
++	fm25->nvmem = nvmem_register(&fm25->nvmem_config);
++	if (IS_ERR(fm25->nvmem))
++		return PTR_ERR(fm25->nvmem);
++
++	dev_info(&spi->dev, "%d %s %s eeprom%s, pagesize %u\n",
++		(fm25->chip.byte_len < 1024) ? chip.byte_len : (fm25->chip.byte_len / 1024),
++		(fm25->chip.byte_len < 1024) ? "Byte" : "KByte",
++		fm25->chip.name,
++		(chip.flags & EE_READONLY) ? " (readonly)" : "",
++		fm25->chip.page_size);
++
++	global_fm25 = fm25;
++
++	return 0;
++}
++
++static int fm25_remove(struct spi_device *spi)
++{
++	struct fm25_data	*fm25;
++
++	fm25 = spi_get_drvdata(spi);
++	nvmem_unregister(fm25->nvmem);
++
++	return 0;
++}
++
++/*-------------------------------------------------------------------------*/
++
++static const struct of_device_id fm25_of_match[] = {
++	{ .compatible = "cypress,fm25", },
++	{ }
++};
++MODULE_DEVICE_TABLE(of, fm25_of_match);
++
++static struct spi_driver fm25_driver = {
++	.driver = {
++		.name		= "fm25",
++		.of_match_table = fm25_of_match,
++	},
++	.probe		= fm25_probe,
++	.remove		= fm25_remove,
++};
++
++module_spi_driver(fm25_driver);
++
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 36)
++static int advfm25_eeprom_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, unsigned long arg )
++#else
++static long advfm25_eeprom_ioctl(struct file* filp, unsigned int cmd, unsigned long arg )
++#endif
++{
++	switch ( cmd ) 
++	{
++	default:
++		return -EINVAL;
++	}
++
++	return 0;
++}
++
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 36)
++static int advfm25_eeprom_read(struct file *file, char *buf, size_t count, loff_t *ptr)
++#else
++static ssize_t advfm25_eeprom_read(struct file *file, char *buf, size_t count, loff_t *ptr)
++#endif
++{
++	//char tmpbuf[2048] = {0};
++	//ssize_t readlen = 0;
++
++	if (global_fm25 == NULL) {
++		printk(KERN_ERR "Error: device not found \n");
++		return -EFAULT;
++	}
++
++	unsigned offset = *ptr;
++	if(offset + count > global_fm25->chip.byte_len){
++		printk(KERN_ERR "Error: address overflow (offset = %x, length = %x, chip size = %x) \n", offset, count, global_fm25->chip.byte_len);
++		return -EFAULT;
++	}
++	
++	void* tmpbuf = kzalloc(count, GFP_KERNEL);
++	if(tmpbuf == NULL){
++		printk(KERN_ERR "Error: error allocting memory \n");
++		return -EFAULT;
++	}
++
++	void* pbuf = tmpbuf;
++	size_t length = count;
++	do
++	{
++		ssize_t tmpreadlen = 0;
++		if(length > FM25_PAGE_SIZE){
++			tmpreadlen = fm25_data_read(global_fm25, pbuf, offset, FM25_PAGE_SIZE);
++			if (tmpreadlen != FM25_PAGE_SIZE) {
++				printk(KERN_ERR "Error: fm25_read() \n");
++				kfree(tmpbuf);
++				return -EFAULT;
++			}
++			length -= FM25_PAGE_SIZE;
++			pbuf+= FM25_PAGE_SIZE;
++			offset += FM25_PAGE_SIZE;
++		}else{
++			tmpreadlen = fm25_data_read(global_fm25, pbuf, offset, length);
++			if (tmpreadlen != length) {
++				printk(KERN_ERR "Error: fm25_read() \n");
++				kfree(tmpbuf);
++				return -EFAULT;
++			}
++			length = 0;
++		}
++	} while(length > 0);
++	
++
++	if (copy_to_user(buf, tmpbuf, count)) {
++		printk(KERN_ERR "Error: copy_from_user() \n");
++		kfree(tmpbuf);
++		return -EFAULT;
++	}
++
++	kfree(tmpbuf);
++
++	if(length)return -EFAULT;
++	else return count;
++}
++
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 36)
++static int advfm25_eeprom_write(struct file *file, const char *buf, size_t count, loff_t *ppos)
++#else
++static ssize_t advfm25_eeprom_write(struct file *file, const char *buf, size_t count, loff_t *ppos)
++#endif
++{
++	//char tmpbuf[2048] = {0};
++	//ssize_t writelen = 0;
++
++	if (global_fm25 == NULL) {
++		printk(KERN_ERR "Error: device not found \n");
++		return -EFAULT;
++	}
++
++	unsigned offset = *ppos;
++	if(offset + count > global_fm25->chip.byte_len){
++		printk(KERN_ERR "Error: address overflow (offset = %x, length = %x, chip size = %x) \n", offset, count, global_fm25->chip.byte_len);
++		return -EFAULT;
++	}
++
++	void* tmpbuf = kzalloc(count, GFP_KERNEL);
++	if(tmpbuf == NULL){
++		printk(KERN_ERR "Error: error allocting memory \n");
++		return -EFAULT;
++	}
++
++	if (copy_from_user(tmpbuf, buf, count)) {
++		printk(KERN_ERR "Error: copy_from_user() \n");
++		kfree(tmpbuf);
++		return -EFAULT;
++	}
++
++	void* pbuf = tmpbuf;
++	size_t length = count;
++	do{
++		ssize_t tmpreadlen = 0;
++		if(length > FM25_PAGE_SIZE){
++			tmpreadlen = fm25_data_write(global_fm25, pbuf, offset, FM25_PAGE_SIZE);
++			if (tmpreadlen != FM25_PAGE_SIZE) {
++				printk(KERN_ERR "Error: fm25_write() \n");
++				kfree(tmpbuf);
++				return -EFAULT;
++			}
++			length -= FM25_PAGE_SIZE;
++			pbuf+= FM25_PAGE_SIZE;
++			offset += FM25_PAGE_SIZE;
++		}else{
++			tmpreadlen = fm25_data_write(global_fm25, pbuf, offset, length);
++			if (tmpreadlen != length) {
++				printk(KERN_ERR "Error: fm25_write() \n");
++				kfree(tmpbuf);
++				return -EFAULT;
++			}
++			length = 0;
++		}
++	}while(length > 0);
++
++	kfree(tmpbuf);
++
++	if(length)return -EFAULT;
++	else return count;
++	//return writelen;
++}
++
++static loff_t advfm25_eeprom_llseek(struct file *file, loff_t offset, int origin)
++{
++	loff_t newpos = 0;
++
++	switch (origin)
++	{
++	case 0:		/* SEEK_SET */
++		newpos = offset;
++		break;
++	case 1:		/* SEEK_CUR */
++		newpos += file->f_pos + offset;
++		break;
++	case 2:		/* SEEK_END */
++		//newpos += 0x20000;
++		newpos = global_fm25->chip.byte_len - offset;
++		break;
++	default:	/* can't happen */
++		return -EINVAL;
++	}
++
++	if(newpos > global_fm25->chip.byte_len)
++        newpos = global_fm25->chip.byte_len;
++    if(newpos < 0)
++        newpos = 0;
++
++	file->f_pos = newpos;
++
++	return newpos;
++}
++
++static int advfm25_eeprom_open(struct inode *inode, struct file *file)
++{
++	return 0;
++}
++
++static int advfm25_eeprom_release(struct inode *inode, struct file *file)
++{
++	return 0;
++}
++
++static struct file_operations advfm25_eeprom_fops = {
++	owner:		THIS_MODULE,
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 36)
++	ioctl:		advfm25_eeprom_ioctl,
++#else
++	unlocked_ioctl: advfm25_eeprom_ioctl,
++#endif
++	read:		advfm25_eeprom_read,
++	write:		advfm25_eeprom_write,
++	llseek:		advfm25_eeprom_llseek,
++	open:		advfm25_eeprom_open,
++	release:	advfm25_eeprom_release,
++};
++
++static int __init advfm25_init(void)
++{
++	if ((major = register_chrdev(0, "adveeprom", &advfm25_eeprom_fops)) < 0) {
++		printk("register chrdev failed!\n");
++		return -ENODEV;
++	}
++
++	eeprom_class = class_create(THIS_MODULE, "adveeprom");
++	if (IS_ERR(eeprom_class)) {
++		printk(KERN_ERR "Error creating eeprom class.\n");
++		return -EINVAL;
++	}
++#if LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 27)
++	device_create(eeprom_class, NULL, MKDEV(major, 0), NULL, "adveeprom");
++#else
++	class_device_create(eeprom_class, NULL, MKDEV(major, 0), NULL, "adveeprom");
++#endif
++
++	printk("=====================================================\n");
++	printk("     Advantech fm25v10 eeprom driver V%s [%s]\n", 
++			ADVANTECH_FM25_EEPROM_VER, ADVANTECH_FM25_EEPROM_DATE);
++	printk("=====================================================\n");
++
++	return 0;
++}
++module_init(advfm25_init);
++
++static void __exit advfm25_exit(void)
++{
++	device_destroy(eeprom_class, MKDEV(major, 0));
++	class_destroy(eeprom_class);
++	unregister_chrdev( major, "adveeprom" );
++	printk("Advantech eeprom exit!\n");
++}
++module_exit(advfm25_exit);
++
++
++MODULE_DESCRIPTION("Driver for Cypress SPI FRAMs (Advantech TPC-71W fm25v10 eeprom)");
++MODULE_AUTHOR("Ji.Xu");
++MODULE_LICENSE("GPL");
++MODULE_ALIAS("spi:fram");

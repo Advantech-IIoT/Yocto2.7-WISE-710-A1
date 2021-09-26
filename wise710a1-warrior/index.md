@@ -55,19 +55,19 @@ Github. After done for prerequisites, make image by makefile script.
 ```
 $ git config --global user.name "<Your-Name>"
 $ git config --global user.email "<Your-Mail-Address>"
-$ git config --global core.editor vim
 ```
 
 #### Clone source
 
 ```
-$ git clone -b git@github.com:Advantech-IIoT/Yocto2.7-WISE-710-A1.git
+$ git clone git@github.com:Advantech-IIoT/Yocto2.7-WISE-710-A1.git
 ```
 
 ### Set up Yocto's working directory (sstate-cache, tmp, and downloads).  
 
 ```
-$ cd yocto
+$ mkdir -p /opt/imx-linux-warrior
+$ cd Yocto2.7-WISE-710-A1/
 $ YOCTO_WORK_DIR=/opt/imx-linux-warrior make prepare
 ```
 

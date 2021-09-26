@@ -9,8 +9,11 @@ MacOS and Windows 10 install VirtualBox virtual machine and run Ubuntu 16.04 64-
 
 ### Host Setup
 
-#### Build environment ([Yocto project supported distributions](https://www.yoctoproject.org/docs/current/ref-manual/ref-manual.html#detailed-supported-distros)):
-- Host: Ubuntu 16.04 x86_64
+#### Build environment ([IMX_YOCTO_PROJECT_USERS_GUIDE.](https://www.nxp.com.cn/docs/en/user-guide/IMX_YOCTO_PROJECT_USERS_GUIDE.pdf)):
+- Host:
+  - Recommand Ubuntu 18.04 or later
+  - It is recommended that at least 120 GB is provided
+  - Install the essential Yocto Project host packages
 - Packages for Ubuntu
   - **Essentials:** Packages needed to build an image on a headless system:
     ```shell
